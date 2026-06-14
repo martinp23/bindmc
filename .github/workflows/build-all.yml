@@ -1,0 +1,176 @@
+name: Build PyInstaller App For All Targets
+
+on: workflow_dispatch
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
+        fetch-depth: 0
+        token: ${{ secrets.SUBMODULES_TOKEN }}
+        
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Locate site-packages (Windows)
+      shell: pwsh
+      run: |
+        $site = uv run python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])"
+        echo "SITE_PKG=$site" >> $env:GITHUB_ENV
+
+    - name: Build with nicegui-pack (Windows)
+      shell: pwsh
+      # Windows uses $env:PYTHONPATH and ';' as separators
+      env:
+        PYTHONPATH: "src;bindtools/src"
+      run: |
+        uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py `
+          --add-data "$env:SITE_PKG\arviz\static;arviz/static" `
+          --add-data "$env:SITE_PKG\arviz\data;arviz/data" `
+          --add-data "$env:SITE_PKG\latex2mathml\unimathsymbols.txt;latex2mathml" `
+          --add-data "src\bindmc\webgui\default_models.json;webgui" 
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bindmc-executable-windows
+        path: dist/bindmc.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
+        fetch-depth: 0
+        token: ${{ secrets.SUBMODULES_TOKEN }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Locate site-packages (Linux)
+      shell: bash
+      run: |
+        SITE_PKG=$(uv run python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+        echo "SITE_PKG=$SITE_PKG" >> $GITHUB_ENV
+
+    - name: Build with nicegui-pack (Linux)
+      shell: bash
+      env:
+        PYTHONPATH: "src:bindtools/src"
+      run: |
+        uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py \
+          --add-data "$SITE_PKG/arviz/static:arviz/static" \
+          --add-data "$SITE_PKG/arviz/data:arviz/data" \
+          --add-data "$SITE_PKG/latex2mathml/unimathsymbols.txt:latex2mathml" \
+          --add-data "src/bindmc/webgui/default_models.json:webgui" 
+   
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bindmc-executable-linux
+        path: dist/bindmc
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
+        fetch-depth: 0
+        token: ${{ secrets.SUBMODULES_TOKEN }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Locate site-packages (macOS)
+      shell: bash
+      run: |
+        SITE_PKG=$(uv run python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+        echo "SITE_PKG=$SITE_PKG" >> $GITHUB_ENV
+
+    - name: Build with nicegui-pack (macOS ARM)
+      shell: bash
+      env:
+        PYTHONPATH: "src:bindtools/src"
+      run: |
+        uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py \
+          --add-data "$SITE_PKG/arviz/static:arviz/static" \
+          --add-data "$SITE_PKG/arviz/data:arviz/data" \
+          --add-data "$SITE_PKG/latex2mathml/unimathsymbols.txt:latex2mathml" \
+          --add-data "src/bindmc/webgui/default_models.json:webgui" 
+     
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bindmc-executable-macos
+        path: dist/bindmc
+
+  build-macos-intel:
+    runs-on: macos-13
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
+        fetch-depth: 0
+        token: ${{ secrets.SUBMODULES_TOKEN }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Locate site-packages (macOS Intel)
+      shell: bash
+      run: |
+        SITE_PKG=$(uv run python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+        echo "SITE_PKG=$SITE_PKG" >> $GITHUB_ENV
+
+    - name: Build with nicegui-pack (macOS Intel)
+      shell: bash
+      env:
+        PYTHONPATH: "src:bindtools/src"
+      run: |
+        uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py \
+          --add-data "$SITE_PKG/arviz/static:arviz/static" \
+          --add-data "$SITE_PKG/arviz/data:arviz/data" \
+          --add-data "$SITE_PKG/latex2mathml/unimathsymbols.txt:latex2mathml" \
+          --add-data "src/bindmc/webgui/default_models.json:webgui" 
+
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bindmc-executable-macos-intel
+        path: dist/bindmc

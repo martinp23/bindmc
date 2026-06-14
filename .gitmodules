@@ -1,0 +1,3 @@
+[submodule "bindtools"]
+	path = bindtools
+	url = https://github.com/martinp23/bindtools

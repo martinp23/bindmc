@@ -1,0 +1,11 @@
+*.pyc
+.nicegui/*
+.coverage
+tests/screenshots/*
+screenshots/*
+tests/downloads/*
+build-venv/*
+dist/*
+build/*
+.micromamba/*
+uv.lock

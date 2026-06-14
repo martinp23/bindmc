@@ -1,0 +1,27 @@
+{
+  // Run > Run Build Task (Ctrl+Shift+B) will run main.py
+  "$schema": "vscode://schemas/tasks",
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run main.py",
+      "type": "shell",
+  "command": "${config:python.defaultInterpreterPath}",
+      "args": [
+        "${workspaceFolder}/main.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

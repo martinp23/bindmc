@@ -1,0 +1,48 @@
+name: Build Windows Executable
+
+on:
+  workflow_dispatch: # Allows you to trigger the build manually from the GitHub UI
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
+        fetch-depth: 0
+        token: ${{ secrets.SUBMODULES_TOKEN }}
+        
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+        enable-cache: true
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Locate site-packages (Windows)
+      shell: pwsh
+      run: |
+        $site = uv run python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])"
+        echo "SITE_PKG=$site" >> $env:GITHUB_ENV
+
+    - name: Build with nicegui-pack (Windows)
+      shell: pwsh
+      # Windows uses $env:PYTHONPATH and ';' as separators
+      env:
+        PYTHONPATH: "src;bindtools/src"
+      run: |
+        uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py `
+          --add-data "$env:SITE_PKG\arviz\static;arviz/static" `
+          --add-data "$env:SITE_PKG\arviz\data;arviz/data" `
+          --add-data "$env:SITE_PKG\latex2mathml\unimathsymbols.txt;latex2mathml" `
+          --add-data "src\bindmc\webgui\default_models.json;webgui" 
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bindmc-executable-windows
+        path: dist/bindmc.exe
