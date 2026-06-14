@@ -107,7 +107,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --dev --python 3.13
 
     - name: Locate site-packages (macOS)
       shell: bash
