@@ -1,6 +1,26 @@
 [project]
 name = "bindmc"
 version = "0.1.0"
+readme = "README.md"
+keywords = ["chemistry", "analytical chemistry", "binding constants", "supramolecular"]
+classifiers = [
+  # How mature is this project? Common values are
+  #   3 - Alpha
+  #   4 - Beta
+  #   5 - Production/Stable
+  "Development Status :: 3 - Alpha",
+
+  # Indicate who your project is intended for
+  "Intended Audience :: Science/Research",
+
+  # Specify the Python versions you support here.
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
 requires-python = ">=3.12"
 dependencies = [
     "arviz==0.21.0",
@@ -22,6 +42,17 @@ dependencies = [
     "tqdm==4.66.3",
     "uncertainties==3.2.3",
 ]
+
+authors = [
+  {name = "Martin Peeks", email = "martinp23@googlemail.com"},
+  {email = "m.peeks@unsw.edu.au"},
+]
+
+[project.urls]
+Homepage = "https://github.com/martinp23/bindmc"
+Documentation = "https://readthedocs.org"
+Repository = "https://github.com/martinp23/bindmc.git"
+Issues = "https://github.com/martinp23/bindmc/issues"
 
 [tool.uv.sources]
 bindtools = { path = "./bindtools", editable = true }
