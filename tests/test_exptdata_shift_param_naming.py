@@ -3,7 +3,7 @@ import pandas as pd
 from lmfit import Parameter as LMFitParameter
 from lmfit import Parameters
 
-from webgui.classes import ChemicalShiftParam, ExptData, Model, RawData
+from bindmc.webgui.classes import ChemicalShiftParam, ExptData, Model, RawData
 
 
 def _new_expt(columns: list[str]) -> ExptData:

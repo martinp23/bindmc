@@ -3,9 +3,9 @@ import pytest
 import pandas as pd
 
 import bindtools.binding as bd
-from webgui.classes import BindingConstant, ChemicalShiftParam, ExptData, FitResult, Model, RawData
-from webgui.components.fitting import _infer_analytical_fast_exchange_config
-from webgui.state import StateManager
+from bindmc.webgui.classes import BindingConstant, ChemicalShiftParam, ExptData, FitResult, Model, RawData
+from bindmc.webgui.components.fitting import _infer_analytical_fast_exchange_config
+from bindmc.webgui.state import StateManager
 
 
 def _new_state_manager() -> StateManager:

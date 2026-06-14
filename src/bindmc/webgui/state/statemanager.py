@@ -1886,7 +1886,7 @@ bd.makeFitResidPlot(fit,plotMask=(0,1),ylabel='Chemical shift (ppm)')"""
         and uses the binding constants from the linked model.  It is entirely
         self-contained (no nicegui / webgui imports).
         """
-        from webgui.export.notebook_exporter import export_simulation_notebook
+        from bindmc.webgui.export.notebook_exporter import export_simulation_notebook
 
         model = self.models.get(sim.model_id)
         if model is None:
@@ -1909,7 +1909,7 @@ bd.makeFitResidPlot(fit,plotMask=(0,1),ylabel='Chemical shift (ppm)')"""
             Raw data to be saved as CSV.
         """
         import pandas as pd  # noqa: F401 — type annotation only
-        from webgui.export.notebook_exporter import export_fit_notebook
+        from bindmc.webgui.export.notebook_exporter import export_fit_notebook
 
         # Ensure all objects are linked
         if not hasattr(fit, "_model") or fit._model is None:
@@ -1983,7 +1983,7 @@ bd.makeFitResidPlot(fit,plotMask=(0,1),ylabel='Chemical shift (ppm)')"""
         h5_bytes : bytes or None
         """
         import pandas as pd  # noqa: F401
-        from webgui.export.notebook_exporter import export_mcmc_notebook
+        from bindmc.webgui.export.notebook_exporter import export_mcmc_notebook
 
         # Always use active_fit so that the fit name embedded in the notebook's
         # read_csv call matches the ZIP entry name produced by the caller.

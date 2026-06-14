@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from webgui.state import StateManager
-from webgui.classes import Simulation
-from webgui.classes.BindingConstant import BindingConstant
+from bindmc.webgui.state import StateManager
+from bindmc.webgui.classes import Simulation
+from bindmc.webgui.classes.BindingConstant import BindingConstant
 
 
 # ---------------------------------------------------------------------------
@@ -319,12 +319,12 @@ def _make_minimal_uvvis_fit():
     Builds the smallest possible objects needed to exercise export_fit_notebook
     with linear observables, without going through the full StateManager fitting path.
     """
-    from webgui.classes.Model import Model
-    from webgui.classes.RawData import RawData
-    from webgui.classes.ExptData import ExptData
-    from webgui.classes.FitResult import FitResult
+    from bindmc.webgui.classes.Model import Model
+    from bindmc.webgui.classes.RawData import RawData
+    from bindmc.webgui.classes.ExptData import ExptData
+    from bindmc.webgui.classes.FitResult import FitResult
 
-    from webgui.classes.BindingConstant import BindingConstant as BC
+    from bindmc.webgui.classes.BindingConstant import BindingConstant as BC
     model = Model(
         name="1:1 UV-vis",
         component_names=["H", "G"],
@@ -393,7 +393,7 @@ def _make_minimal_uvvis_fit():
 
 def test_fit_notebook_uvvis_numerical():
     """export_fit_notebook with lin_obs_* kwargs injects specToLinear for numerical path."""
-    from webgui.export.notebook_exporter import export_fit_notebook
+    from bindmc.webgui.export.notebook_exporter import export_fit_notebook
 
     fit, model, expt_data, raw, lin_obs_col_names, lin_obs_param_map = _make_minimal_uvvis_fit()
 
@@ -423,11 +423,11 @@ def test_fit_notebook_uvvis_numerical():
 
 def test_fit_notebook_uvvis_analytical():
     """export_fit_notebook with analytical_fast_exchange=True also sets analytical_linear_obs_param_map."""
-    from webgui.export.notebook_exporter import export_fit_notebook
-    from webgui.classes.FitResult import FitResult
-    from webgui.classes.Model import Model
-    from webgui.classes.RawData import RawData
-    from webgui.classes.ExptData import ExptData
+    from bindmc.webgui.export.notebook_exporter import export_fit_notebook
+    from bindmc.webgui.classes.FitResult import FitResult
+    from bindmc.webgui.classes.Model import Model
+    from bindmc.webgui.classes.RawData import RawData
+    from bindmc.webgui.classes.ExptData import ExptData
 
     fit, model, expt_data, raw, lin_obs_col_names, lin_obs_param_map = _make_minimal_uvvis_fit()
 
@@ -456,15 +456,15 @@ def test_fit_notebook_uvvis_analytical():
 
 def test_fit_notebook_uvvis_via_state_manager():
     """StateManager.dump_fit_notebook includes specToLinear when expt_data has UV-vis cols."""
-    from webgui.classes.Model import Model
-    from webgui.classes.RawData import RawData
-    from webgui.classes.ExptData import ExptData
-    from webgui.classes.FitResult import FitResult
-    from webgui.classes.ExptDataType import ExptDataType
+    from bindmc.webgui.classes.Model import Model
+    from bindmc.webgui.classes.RawData import RawData
+    from bindmc.webgui.classes.ExptData import ExptData
+    from bindmc.webgui.classes.FitResult import FitResult
+    from bindmc.webgui.classes.ExptDataType import ExptDataType
 
     sm = StateManager(load_prior_state=False)
 
-    from webgui.classes.BindingConstant import BindingConstant as BC
+    from bindmc.webgui.classes.BindingConstant import BindingConstant as BC
     model = Model(
         name="1:1 UV-vis SM",
         component_names=["H", "G"],

@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from webgui.classes import ExptData, FitResult, MCMCSim, RawData, Simulation
-from webgui.state import StateManager
+from bindmc.webgui.classes import ExptData, FitResult, MCMCSim, RawData, Simulation
+from bindmc.webgui.state import StateManager
 
 
 class _FakeEvent:
@@ -44,7 +44,7 @@ def _new_state_manager() -> StateManager:
 
 
 def _new_mcmc(model, expt) -> MCMCSim:
-    mcmc_module = importlib.import_module("webgui.classes.MCMCSim")
+    mcmc_module = importlib.import_module("bindmc.webgui.classes.MCMCSim")
     with patch.object(mcmc_module, "Manager", new=lambda: _FakeManager()):
         return MCMCSim(model=model, expt_data=expt)
 

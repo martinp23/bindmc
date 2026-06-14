@@ -4,7 +4,7 @@ NiceGUI's `nicegui.testing.plugin` (v3+) depends on a `chrome_options` fixture
 which is usually provided by `pytest-selenium`. Our test env doesn't always
 include that plugin, so we provide a minimal, compatible fixture here.
 
-We also ensure the BindTools app is constructed before a `User`/`Screen` opens
+We also ensure the BindMC app is constructed before a `User`/`Screen` opens
 `/`.
 """
 import os
@@ -61,18 +61,18 @@ def chrome_options():
 
 
 @pytest.fixture(autouse=True)
-def _bindtools_server() -> None:
+def _bindmc_server() -> None:
 	"""Ensure the NiceGUI page routes are registered for each test."""
 	if not _HAS_NICEGUI:
 		return None
-	from webgui.app import BindToolsServer
-	BindToolsServer()
+	from bindmc.webgui.app import BindMCServer
+	BindMCServer()
 	return None
 
 # import os
 # import pytest
 # from nicegui.testing import User, Screen
-# from webgui.app import BindToolsServer
+# from bindmc.webgui.app import BindMCServer
 
 
 # pytest_plugins = ['nicegui.testing.user_plugin', 'nicegui.testing.screen_plugin']
@@ -82,12 +82,12 @@ def _bindtools_server() -> None:
 
 # @pytest.fixture
 # def user(user: User) -> User:
-#     BindToolsServer()
+#     BindMCServer()
 #     return user
 
 # @pytest.fixture
 # def screen(screen: Screen) -> Screen:
-#     BindToolsServer()
+#     BindMCServer()
 #     # Configure browser window and download behavior for Selenium-driven Screen
 #     driver = getattr(screen, 'selenium', None)
 #     if driver is not None:

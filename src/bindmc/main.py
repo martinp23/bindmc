@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use('module://matplotlib.backends.backend_svg')
 import sys
 from nicegui import native,ui,app
-from webgui.app import BindToolsServer
+from bindmc.webgui.app import BindMCServer
 import logging
 import nicegui
 from packaging.version import InvalidVersion, Version
@@ -40,11 +40,11 @@ else:
 
 app.native.settings['ALLOW_DOWNLOADS'] = True
 
-#logging.basicConfig(level=logging.INFO, filename='bindtools.log')
+#logging.basicConfig(level=logging.INFO, filename='BindMC.log')
 logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
 
-logger.info("Starting BindTools NiceGUI server...")
-BindToolsServer()
+logger.info("Starting BindMC NiceGUI server...")
+BindMCServer()
 
 # Set DEV based on whether running from PyInstaller bundle
 DEV = not getattr(sys, 'frozen', False)
@@ -58,10 +58,10 @@ else:
 
 
 # make a sensible storage path for native mode
-storage_path = Path(user_data_dir(appname="BindTools", appauthor=False))
+storage_path = Path(user_data_dir(appname="BindMC", appauthor=False))
 storage_path.mkdir(parents=True, exist_ok=True)
 
 # Redirect native window persistence data away from default paths
 app.native.start_args['storage_path'] = str(storage_path)
 
-ui.run(title='BindTools', reload=reload, native=native_mode, port=native.find_open_port(), storage_secret='bindtools_secret')
+ui.run(title='BindMC', reload=reload, native=native_mode, port=native.find_open_port(), storage_secret='bindmc_secret')

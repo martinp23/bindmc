@@ -1,6 +1,6 @@
 # webgui/components/__init__.py
 from .base import BaseComponent
-from .header import BindToolsHeader
+from .header import BindMCHeader
 from .data_gen import DataGenerationPanel
 from .data_import import DataImportPanel
 from .data_model import DataModelPanel
@@ -16,7 +16,7 @@ from .body import Body
 
 __all__ = [
     "BaseComponent",
-    "BindToolsHeader",
+    "BindMCHeader",
     "DataGenerationPanel",
     "DataModelPanel",
     "DataImportPanel",

@@ -1,4 +1,4 @@
-from webgui.components.bayes import _chain_height_px, _corner_height_px, _corner_width_pct
+from bindmc.webgui.components.bayes import _chain_height_px, _corner_height_px, _corner_width_pct
 
 
 def test_corner_width_policy_breakpoints():

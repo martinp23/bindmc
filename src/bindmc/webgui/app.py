@@ -1,12 +1,12 @@
 from nicegui import ui
 
 from .components import (
-    BindToolsHeader,
+    BindMCHeader,
     Body
 )
 from .state.statemanager import StateManager
 
-class BindToolsServer:
+class BindMCServer:
 
     def __init__(self):
 
@@ -48,7 +48,7 @@ class BindToolsServer:
     def _generate_header(self):
         ui.colors(primary='#000000', secondary='grey-5', accent='blue-grey-5')
 
-        self.components["header"] = BindToolsHeader(state_manager=self.state_manager)
+        self.components["header"] = BindMCHeader(state_manager=self.state_manager)
 
     def _generate_body(self):
         self.components["body"]= Body(self.state_manager)

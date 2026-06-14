@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 
-from webgui.components.body import _compute_tab_disable_reasons, _format_disable_tooltip
+from bindmc.webgui.components.body import _compute_tab_disable_reasons, _format_disable_tooltip
 
 
 def _state(

@@ -20,7 +20,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
 
     screen.selenium.set_window_size(1920, 1080)
     # Basic presence check (header label)
-    screen.find('BindTools GUI')
+    screen.find('BindMC GUI')
 
     # Navigate to Model Setup
     screen.find('Simulate').click()

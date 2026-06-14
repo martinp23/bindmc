@@ -103,7 +103,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui(screen: Screen, tmp_pat
 
     screen.open("/")
     screen.selenium.set_window_size(1920, 1080)
-    screen.find("BindTools GUI")
+    screen.find("BindMC GUI")
 
     # Build 1:1 model on the Fit side.
     screen.find("Fit").click()

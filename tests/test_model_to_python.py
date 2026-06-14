@@ -1,5 +1,5 @@
-from webgui.state import StateManager
-from webgui.classes import *
+from bindmc.webgui.state import StateManager
+from bindmc.webgui.classes import *
 import numpy as np
 import pytest
 

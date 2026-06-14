@@ -1,4 +1,4 @@
-# BindTools WebGUI Release Checklist
+# BindMC WebGUI Release Checklist
 
 Use this as the source of truth for shipping readiness.
 

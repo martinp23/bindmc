@@ -3,7 +3,7 @@ from .base import BaseComponent
 from nicegui import ui
 
 
-class BindToolsHeader(BaseComponent):
+class BindMCHeader(BaseComponent):
 
     # (label, dialog_title, collection_attr, active_id_attr, name_attr, reason)
     _ROW_CONFIGS = [
@@ -34,7 +34,7 @@ class BindToolsHeader(BaseComponent):
         with ui.header().classes(
             "w-full flex justify-between items-center px-4 py-1 bg-black-600 text-white"
         ):
-            ui.label("BindTools GUI").classes("text-xl font-bold")
+            ui.label("BindMC GUI").classes("text-xl font-bold")
             with ui.column().classes("gap-0"):
                 for row in self._rows:
                     with ui.row().classes("items-center gap-1 p-0 leading-none"):

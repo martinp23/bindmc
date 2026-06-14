@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from webgui.utils import _infer_simple_fast_exchange_topology
+from bindmc.webgui.utils import _infer_simple_fast_exchange_topology
 
 
 def test_infer_simple_fast_exchange_topology_variants():

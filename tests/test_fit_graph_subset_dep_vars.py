@@ -4,8 +4,8 @@ import pytest
 
 import pandas as pd
 
-from webgui.classes import ExptData, FitResult, Model, RawData
-from webgui.components.fitting import _mapped_dependent_columns_for_fit, _prepare_fit_plot_frames
+from bindmc.webgui.classes import ExptData, FitResult, Model, RawData
+from bindmc.webgui.components.fitting import _mapped_dependent_columns_for_fit, _prepare_fit_plot_frames
 
 
 def _make_fit(

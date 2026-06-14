@@ -12,7 +12,7 @@ async def test_component_concentration_generation(user: User) -> None:
     # Set up test data
     
     await user.open('/')
-    await user.should_see('BindTools')
+    await user.should_see('BindMC')
     user.find('Simulate').click()
     user.find('Define model').click()
 

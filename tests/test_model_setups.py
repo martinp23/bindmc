@@ -1,4 +1,4 @@
-from webgui.utils import eqMatFromEqnStr,eqMatFromStr,eq_mat_from_equation_str_infer_components
+from bindmc.webgui.utils import eqMatFromEqnStr,eqMatFromStr,eq_mat_from_equation_str_infer_components
 import numpy as np
 import pytest
 

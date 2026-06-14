@@ -21,11 +21,11 @@ import numpy as np
 import lmfit
 
 import bindtools.binding as bd
-from webgui.classes.ExptDataType import ExptDataType
-from webgui.classes.ExptData import ExptData
-from webgui.classes.RawData import RawData
-from webgui.classes.Component import Component
-from webgui.classes.Model import Model
+from bindmc.webgui.classes.ExptDataType import ExptDataType
+from bindmc.webgui.classes.ExptData import ExptData
+from bindmc.webgui.classes.RawData import RawData
+from bindmc.webgui.classes.Component import Component
+from bindmc.webgui.classes.Model import Model
 from lmfit import Parameter as LMFitParameter
 
 
