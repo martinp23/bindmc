@@ -1,7 +1,6 @@
 name: Build PyInstaller App For All Targets
 
 on:
-  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
   push:
     tags:
       - 'v*' # Triggers on v1, v2.0, v1.0.0, etc.
@@ -43,11 +42,23 @@ jobs:
           --add-data "$env:SITE_PKG\latex2mathml\unimathsymbols.txt;latex2mathml" `
           --add-data "src\bindmc\webgui\default_models.json;webgui" 
       
+    - name: Rename binary with Tag
+      shell: bash
+      run: |
+        # github.ref_name contains the tag name (e.g., v1.0.3)
+        mv dist/bindmc.exe dist/bindmc-${{ github.ref_name }}-windows64.exe
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: bindmc-executable-windows
-        path: dist/bindmc.exe
+        path: dist/bindmc-${{ github.ref_name }}-windows64.exe
+
+    - name: Upload Binary to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+         files: |
+           dist/bindmc-${{ github.ref_name }}-windows64.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -85,11 +96,23 @@ jobs:
           --add-data "src/bindmc/webgui/default_models.json:webgui" 
    
 
+    - name: Rename binary with Tag
+      shell: bash
+      run: |
+        # github.ref_name contains the tag name (e.g., v1.0.3)
+        mv dist/bindmc dist/bindmc-${{ github.ref_name }}-linux64
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: bindmc-executable-linux
-        path: dist/bindmc
+        name: bindmc-executable-windows
+        path: dist/bindmc-${{ github.ref_name }}-linux64
+
+    - name: Upload Binary to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+         files: |
+           dist/bindmc-${{ github.ref_name }}-linux64
 
   build-macos:
     runs-on: macos-latest
@@ -127,11 +150,23 @@ jobs:
           --add-data "src/bindmc/webgui/default_models.json:webgui" 
      
 
+    - name: Rename binary with Tag
+      shell: bash
+      run: |
+        # github.ref_name contains the tag name (e.g., v1.0.3)
+        mv dist/bindmc dist/bindmc-${{ github.ref_name }}-macos-arm64
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: bindmc-executable-macos
-        path: dist/bindmc
+        name: bindmc-executable-windows
+        path: dist/bindmc-${{ github.ref_name }}-macos-arm64
+
+    - name: Upload Binary to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+         files: |
+           dist/bindmc-${{ github.ref_name }}-macos-arm64
 
   build-macos-intel:
     runs-on: macos-13
@@ -169,8 +204,20 @@ jobs:
           --add-data "src/bindmc/webgui/default_models.json:webgui" 
 
 
+    - name: Rename binary with Tag
+      shell: bash
+      run: |
+        # github.ref_name contains the tag name (e.g., v1.0.3)
+        mv dist/bindmc dist/bindmc-${{ github.ref_name }}-macos-intel
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: bindmc-executable-macos-intel
-        path: dist/bindmc
+        name: bindmc-executable-windows
+        path: dist/bindmc-${{ github.ref_name }}-macos-intel
+
+    - name: Upload Binary to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+         files: |
+           dist/bindmc-${{ github.ref_name }}-macos-intel
