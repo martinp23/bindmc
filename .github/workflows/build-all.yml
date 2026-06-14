@@ -1,6 +1,7 @@
 name: Build PyInstaller App For All Targets
 
 on:
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
   push:
     tags:
       - 'v*' # Triggers on v1, v2.0, v1.0.0, etc.
