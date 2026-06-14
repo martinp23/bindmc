@@ -13,7 +13,6 @@ jobs:
       with: 
         submodules: recursive
         fetch-depth: 0
-        token: ${{ secrets.SUBMODULES_TOKEN }}
         
     - name: Set up uv
       uses: astral-sh/setup-uv@v5
@@ -56,7 +55,6 @@ jobs:
       with: 
         submodules: recursive
         fetch-depth: 0
-        token: ${{ secrets.SUBMODULES_TOKEN }}
 
     - name: Set up uv
       uses: astral-sh/setup-uv@v5
@@ -99,7 +97,6 @@ jobs:
       with: 
         submodules: recursive
         fetch-depth: 0
-        token: ${{ secrets.SUBMODULES_TOKEN }}
 
     - name: Set up uv
       uses: astral-sh/setup-uv@v5
@@ -142,7 +139,6 @@ jobs:
       with: 
         submodules: recursive
         fetch-depth: 0
-        token: ${{ secrets.SUBMODULES_TOKEN }}
 
     - name: Set up uv
       uses: astral-sh/setup-uv@v5
