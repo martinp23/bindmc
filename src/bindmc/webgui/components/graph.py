@@ -1,10 +1,10 @@
 import json
 
-from nicegui import ui
+from nicegui import ui, app
 
 from .base import BaseComponent
 from ..classes import Simulation, FitResult
-from ..utils import safe_filename
+from ..utils import safe_filename, custom_download
 import pandas as pd
 import uuid
 
@@ -399,7 +399,39 @@ class Graph(BaseComponent):
             ui.notify(f"No plotted data available for {filename}.", type="warning")
             return
 
-        js = f"""
+        is_native = False
+        try:
+            if getattr(app.native, "main_window", None) is not None:
+                is_native = True
+        except Exception:
+            pass
+
+        if is_native:
+            js = f"""
+const root = getElement({self.graph.id});
+const container = root?.$el ?? root;
+const plot = container?.querySelector('.js-plotly-plot') ?? container;
+if (!plot || typeof Plotly === 'undefined') {{
+    null;
+}} else {{
+    Plotly.toImage(plot, {{format: 'png', scale: 2}});
+}}
+"""
+            data_url = await ui.run_javascript(js)
+            if not data_url or not data_url.startswith("data:image/png;base64,"):
+                ui.notify(f"Unable to export {filename}.png", type="negative")
+                return
+
+            try:
+                import base64
+
+                header, encoded = data_url.split(",", 1)
+                image_bytes = base64.b64decode(encoded)
+                await custom_download(image_bytes, filename=f"{filename}.png")
+            except Exception as e:
+                ui.notify(f"Failed to export {filename}.png: {str(e)}", type="negative")
+        else:
+            js = f"""
 (() => {{
   const root = getElement({self.graph.id});
   const container = root?.$el ?? root;
@@ -409,9 +441,9 @@ class Graph(BaseComponent):
   return true;
 }})()
 """
-        ok = await ui.run_javascript(js)
-        if not ok:
-            ui.notify(f"Unable to export {filename}.png", type="negative")
+            ok = await ui.run_javascript(js)
+            if not ok:
+                ui.notify(f"Unable to export {filename}.png", type="negative")
 
     def update_plot_compfree(self, e):
         """Update the plot to show or hide component free concentrations."""

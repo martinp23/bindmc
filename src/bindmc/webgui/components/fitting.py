@@ -12,7 +12,7 @@ import bindtools.binding as bd
 from .base import BaseComponent
 from .graph import Graph
 from ..classes import FitResult
-from ..utils import safe_filename, _infer_simple_fast_exchange_topology
+from ..utils import safe_filename, _infer_simple_fast_exchange_topology, custom_download
 from functools import partial
 from typing import cast
 
@@ -647,7 +647,7 @@ class FittingPanel(BaseComponent):
         self.sm.active_fit.name = self.fit_name_input.value
         self.sm.active_fit.description = self.fit_comment_input.value
 
-    def download_fit_data_csv(self) -> None:
+    async def download_fit_data_csv(self) -> None:
         if self.sm.active_fit_id is None:
             ui.notify("No active fit to download.", type="negative")
             return
@@ -685,10 +685,10 @@ class FittingPanel(BaseComponent):
         export_df = pd.concat(export_frames, axis=1)
         filename = f"fit_{safe_filename(fit.name, fallback='fit')}_data.csv"
         csv = export_df.to_csv(index=False, encoding="utf-8", float_format="{:.5e}".format)
-        ui.download.content(csv, filename=filename)
+        await custom_download(csv, filename=filename)
         ui.notify(f"Fit data downloaded as {filename}.", type="info")
 
-    def download_fit_notebook(self) -> None:
+    async def download_fit_notebook(self) -> None:
         """Export the active fit as a zip containing a Jupyter notebook and a data CSV."""
         if self.sm.active_fit_id is None:
             ui.notify("No active fit to export.", type="negative")
@@ -712,7 +712,7 @@ class FittingPanel(BaseComponent):
         buf.seek(0)
 
         zip_filename = f"{stem}_notebook.zip"
-        ui.download.content(buf.read(), filename=zip_filename)
+        await custom_download(buf.read(), filename=zip_filename)
         ui.notify(f"Notebook exported as {zip_filename}.", type="positive")
 
 

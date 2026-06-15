@@ -5,7 +5,7 @@ from nicegui import run, ui
 import bindtools.binding as bd
 
 from ..classes import Simulation
-from ..utils import safe_filename
+from ..utils import safe_filename, custom_download
 from .base import BaseComponent
 from .graph import Graph
 
@@ -50,7 +50,7 @@ class SimulationPanel(BaseComponent):
                     self.save_sim_details_button.set_enabled(False)
                     self.download_sim_button = ui.button(
                         "Download Simulation Data",
-                        on_click=lambda: self.download_sim_data(),
+                        on_click=self.download_sim_data,
                     ).classes("ml-4")
                     self.export_sim_notebook_button = ui.button(
                         "Export to Notebook",
@@ -325,7 +325,7 @@ class SimulationPanel(BaseComponent):
         """Delete a simulation and update the UI."""
         self.sm.delete_simulation(sim)
 
-    def download_sim_data(self):
+    async def download_sim_data(self):
         """Download the current simulation data as a CSV file."""
         active_sim = self.sm.active_sim_or_none
         if active_sim is None:
@@ -335,10 +335,10 @@ class SimulationPanel(BaseComponent):
         sim_data = active_sim.results
         csv = sim_data.to_csv(index=False, encoding="utf-8", float_format="{:.5e}".format)
         filename = f"simulation_{safe_filename(active_sim.name, fallback='simulation')}_data.csv"
-        ui.download.content(csv, filename=filename)
+        await custom_download(csv, filename=filename)
         ui.notify(f"Simulation data downloaded as {filename}.", type="info")
 
-    def download_sim_notebook(self) -> None:
+    async def download_sim_notebook(self) -> None:
         """Export the active simulation as a Jupyter notebook (.ipynb) and download it."""
         active_sim = self.sm.active_sim_or_none
         if active_sim is None:
@@ -354,5 +354,5 @@ class SimulationPanel(BaseComponent):
         stem = safe_filename(active_sim.name, fallback="simulation")
         filename = f"{stem}.ipynb"
         content = json.dumps(notebook, indent=1)
-        ui.download.content(content, filename=filename)
+        await custom_download(content, filename=filename)
         ui.notify(f"Notebook exported as {filename}.", type="positive")

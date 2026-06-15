@@ -326,3 +326,55 @@ def _infer_simple_fast_exchange_topology(eq_mat: np.ndarray, n_comp: int) -> tup
     if len(bound_indices) == 2 and sigs == {(1, 1), (2, 1)}:
         return "2:1", [sig_to_idx[(1, 1)], sig_to_idx[(2, 1)]]
     return None
+
+
+async def custom_download(content: bytes | str, filename: str) -> None:
+    """Download content. If in native mode, open a save dialog; otherwise, use ui.download.content."""
+    from nicegui import ui, app
+
+    # Check if the content is a file-like object and read it
+    if hasattr(content, "read"):
+        content = content.read()
+    elif hasattr(content, "getvalue"):
+        content = content.getvalue()
+
+    # Check if we are running in native mode
+    is_native = False
+    try:
+        if getattr(app.native, "main_window", None) is not None:
+            is_native = True
+    except Exception:
+        pass
+
+    if is_native:
+        try:
+            import webview
+
+            save_dialog_type = getattr(webview, "SAVE_DIALOG", 30)
+            if hasattr(webview, "FileDialog") and hasattr(webview.FileDialog, "SAVE"):
+                save_dialog_type = webview.FileDialog.SAVE
+
+            # app.native.main_window is an async wrapper around pywebview window
+            selected = await app.native.main_window.create_file_dialog(
+                dialog_type=save_dialog_type, save_filename=filename
+            )
+            if selected:
+                filepath = selected[0] if isinstance(selected, (list, tuple)) else selected
+                if isinstance(content, str):
+                    with open(filepath, "w", encoding="utf-8") as f:
+                        f.write(content)
+                else:
+                    with open(filepath, "wb") as f:
+                        f.write(content)
+                ui.notify(f"File saved to {filepath}", type="positive")
+            else:
+                ui.notify("Save cancelled", type="warning")
+        except Exception as e:
+            ui.notify(f"Failed to save file: {str(e)}", type="negative")
+    else:
+        # Standard browser download
+        if isinstance(content, str):
+            content_bytes = content.encode("utf-8")
+        else:
+            content_bytes = content
+        ui.download.content(content_bytes, filename=filename)

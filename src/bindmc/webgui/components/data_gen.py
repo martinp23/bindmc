@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from ..classes import Component
 from .graph import Graph
+from ..utils import custom_download
 
 from nicegui.events import UploadEventArguments
 from collections import Counter
@@ -127,9 +128,12 @@ class DataGenerationPanel(BaseComponent):
             template_text += "\nmM" + ",mM" * (len(self.sm.components) - 1)  # Header row with units
             template_text += "\n" + "0.001" + ",0" * (len(self.sm.components) - 1)  # Add a newline after the header
 
+            async def download_template():
+                await custom_download(template_text, "component_concentrations_template.csv")
+
             ui.button(
                 "Download template CSV",
-                on_click=lambda: ui.download.content(template_text, "component_concentrations_template.csv"),
+                on_click=download_template,
             )
 
             ui.label("""
