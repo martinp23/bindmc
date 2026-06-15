@@ -27,7 +27,7 @@ from ..classes import (
     MCMCSim,
     UIBindings,
 )
-from ..utils import eq_mat_from_equation_str_infer_components
+from ..utils import eq_mat_from_equation_str_infer_components, custom_download
 from lmfit import Parameter as LMFitParameter
 import logging
 
@@ -1048,7 +1048,7 @@ class StateManager:
         # Ensure data is flushed and gzip stream is closed before reading
         buffer.seek(0)
         filename = f"bindtools_project_{timestamp}.json.gz"
-        ui.download.content(buffer.read(), filename=filename)
+        await custom_download(buffer.read(), filename=filename)
         ui.notify(f"Project saved as {filename}", type="info")
 
     def to_json(self):

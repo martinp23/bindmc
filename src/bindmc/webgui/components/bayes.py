@@ -6,7 +6,7 @@ import zipfile
 import numpy as np
 import pandas as pd
 from ..classes import MCMCSim
-from ..utils import safe_filename
+from ..utils import safe_filename, custom_download
 from functools import partial
 import asyncio
 import re
@@ -568,13 +568,13 @@ class BayesPanel(BaseComponent):
         f.tight_layout()
         self.result_corner.update()
 
-    def _download_figure(self, fig, filename: str) -> None:
+    async def _download_figure(self, fig, filename: str) -> None:
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=_EXPORT_DPI, bbox_inches="tight")
         buf.seek(0)
-        ui.download.content(buf.getvalue(), filename=filename)
+        await custom_download(buf.getvalue(), filename=filename)
 
-    def download_chain_figure(self) -> None:
+    async def download_chain_figure(self) -> None:
         if not hasattr(self, "mcmc") or self.mcmc.mc is None or self.mcmc.mc.sampler is None:
             ui.notify("No chain figure available for download.", type="warning")
             return
@@ -588,10 +588,10 @@ class BayesPanel(BaseComponent):
         active_fit = self.sm.active_fit_or_none
         stem = active_fit.name if active_fit is not None else "mcmc"
         filename = f"{safe_filename(stem, fallback='mcmc')}_chains.png"
-        self._download_figure(fig, filename)
+        await self._download_figure(fig, filename)
         plt.close(fig)
 
-    def download_corner_figure(self) -> None:
+    async def download_corner_figure(self) -> None:
         if not hasattr(self, "mcmc") or self.mcmc.mc is None or self.mcmc.mc.sampler is None:
             ui.notify("No corner figure available for download.", type="warning")
             return
@@ -606,7 +606,7 @@ class BayesPanel(BaseComponent):
         active_fit = self.sm.active_fit_or_none
         stem = active_fit.name if active_fit is not None else "mcmc"
         filename = f"{safe_filename(stem, fallback='mcmc')}_corner.png"
-        self._download_figure(fig, filename)
+        await self._download_figure(fig, filename)
         plt.close(fig)
 
     # ------------------------------------------------------------------
@@ -646,19 +646,20 @@ class BayesPanel(BaseComponent):
                     "text-sm text-orange-600 mt-1"
                 )
 
+            async def export_and_close():
+                dialog.close()
+                await self._do_export_notebook(include_chains["value"])
+
             with ui.row().classes("mt-4 gap-2 justify-end w-full"):
                 ui.button("Cancel", on_click=dialog.close)
                 ui.button(
                     "Export",
-                    on_click=lambda: (
-                        dialog.close(),
-                        self._do_export_notebook(include_chains["value"]),
-                    ),
+                    on_click=export_and_close,
                 ).props("color=primary")
 
         dialog.open()
 
-    def _do_export_notebook(self, include_chains: bool) -> None:
+    async def _do_export_notebook(self, include_chains: bool) -> None:
         active_fit = self.sm.active_fit_or_none
         if active_fit is None:
             ui.notify("No active fit to export.", type="negative")
@@ -684,5 +685,5 @@ class BayesPanel(BaseComponent):
         buf.seek(0)
 
         zip_filename = f"{stem}_mcmc_notebook.zip"
-        ui.download.content(buf.read(), filename=zip_filename)
+        await custom_download(buf.read(), filename=zip_filename)
         ui.notify(f"Notebook exported as {zip_filename}.", type="positive")
