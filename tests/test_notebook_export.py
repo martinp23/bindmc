@@ -1,16 +1,13 @@
 """Tests for Jupyter notebook export functionality (TDD — write first, implement after)."""
 import tempfile
-import uuid
 from types import SimpleNamespace
 
 import h5py
 import numpy as np
 import pandas as pd
-import pytest
 
 from bindmc.webgui.state import StateManager
 from bindmc.webgui.classes import Simulation
-from bindmc.webgui.classes.BindingConstant import BindingConstant
 
 
 # ---------------------------------------------------------------------------
@@ -424,10 +421,6 @@ def test_fit_notebook_uvvis_numerical():
 def test_fit_notebook_uvvis_analytical():
     """export_fit_notebook with analytical_fast_exchange=True also sets analytical_linear_obs_param_map."""
     from bindmc.webgui.export.notebook_exporter import export_fit_notebook
-    from bindmc.webgui.classes.FitResult import FitResult
-    from bindmc.webgui.classes.Model import Model
-    from bindmc.webgui.classes.RawData import RawData
-    from bindmc.webgui.classes.ExptData import ExptData
 
     fit, model, expt_data, raw, lin_obs_col_names, lin_obs_param_map = _make_minimal_uvvis_fit()
 

@@ -1,4 +1,3 @@
-from nicegui import ui
 from nicegui.testing import User
 import pandas as pd
 import numpy as np

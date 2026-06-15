@@ -1,11 +1,4 @@
-import uuid
-from dataclasses import asdict, dataclass, field, InitVar
-from typing import  Optional,Any
-import unicodedata
-from nicegui import binding
-import numpy as np
-import pandas as pd
-from lmfit import Parameter as LMFitParameter
+from dataclasses import dataclass
 
 @dataclass
 class Component:

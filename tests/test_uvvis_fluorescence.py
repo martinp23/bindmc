@@ -15,16 +15,12 @@ Covers:
 
 from __future__ import annotations
 
-import uuid
-import pytest
 import numpy as np
-import lmfit
 
 import bindtools.binding as bd
 from bindmc.webgui.classes.ExptDataType import ExptDataType
 from bindmc.webgui.classes.ExptData import ExptData
 from bindmc.webgui.classes.RawData import RawData
-from bindmc.webgui.classes.Component import Component
 from bindmc.webgui.classes.Model import Model
 from lmfit import Parameter as LMFitParameter
 
@@ -338,7 +334,6 @@ class TestBuildAbsToSpec:
 
     def test_no_linear_obs_sets_abs_to_spec_none(self):
         """build_abs_to_spec with no UV-vis columns sets abs_to_spec to None."""
-        import pandas as pd
         edt_conc = ExptDataType(name="Conc", init_meas="grav_vol", units="M")
         edt_nmr = ExptDataType(name="NMR shift", init_meas="nmr_ppm", units="ppm")
         dtypes = {"conc": edt_conc, "delta_H": edt_nmr}

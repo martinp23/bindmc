@@ -5,7 +5,6 @@ import pandas as pd
 from . import (
     BayesPanel,
     BindingModelPanel,
-    BindMCHeader,
     DataGenerationPanel,
     DataImportPanel,
     DataModelPanel,

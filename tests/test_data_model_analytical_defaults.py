@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from bindmc.webgui.utils import _infer_simple_fast_exchange_topology
 

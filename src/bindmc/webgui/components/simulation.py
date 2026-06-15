@@ -1,10 +1,7 @@
-import io
 import json
-import zipfile
 import numpy as np
 import pandas as pd
 from nicegui import run, ui
-import asyncio 
 import bindtools.binding as bd
 
 from ..classes import Simulation

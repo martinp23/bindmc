@@ -316,8 +316,8 @@ def export_fit_notebook(
         "",
         "## Original fit results",
         "",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| AIC | {aic_str} |",
         f"| BIC | {bic_str} |",
         f"| χ² | {chisqr_str} |",
@@ -328,7 +328,7 @@ def export_fit_notebook(
         "|-----------|-------|--------|",
         *param_rows,
         *(
-            [f"", f"**Termination:** {fit.termination_message}"]
+            ["", f"**Termination:** {fit.termination_message}"]
             if fit.termination_message
             else []
         ),

@@ -1,7 +1,5 @@
 from bindmc.webgui.state import StateManager
 from bindmc.webgui.classes import *
-import numpy as np
-import pytest
 
 # pytest_plugins = ['nicegui.testing.user_plugin']
 

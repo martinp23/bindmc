@@ -6,7 +6,6 @@ import os
 import glob
 from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
-from selenium.webdriver.support import expected_conditions as EC  # type: ignore
 import filecmp
 
 def test_simulation_workflow_screen(screen: Screen) -> None:
