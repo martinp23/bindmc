@@ -20,6 +20,9 @@ import nicegui
 from packaging.version import InvalidVersion, Version
 from pathlib import Path
 from platformdirs import user_data_dir
+from importlib.metadata import version
+
+__version__ = version("bindmc")
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +48,7 @@ app.native.settings["ALLOW_DOWNLOADS"] = True
 # logging.basicConfig(level=logging.INFO, filename='BindMC.log')
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
 
-logger.info("Starting BindMC NiceGUI server...")
+logger.info(f"Starting BindMC {__version__} NiceGUI server...")
 BindMCServer()
 
 # Set DEV based on whether running from PyInstaller bundle
