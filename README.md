@@ -1,7 +1,7 @@
 # bindmc
 
-[![PyPI version](https://badge.fury.io/py/bindtools.svg)](https://badge.fury.io/py/bindtools)
-[![Python Version](https://img.shields.io/pypi/pyversions/bindtools.svg)](https://pypi.org/project/bindtools/)
+[![PyPI version](https://badge.fury.io/py/bindmc.svg)](https://badge.fury.io/py/bindmc)
+[![Python Version](https://img.shields.io/pypi/pyversions/bindmc.svg)](https://pypi.org/project/bindmc/)
 
 `bindmc` is a tool for calculating binding constants, built on top of [bindtools](https://github.com/martinp23/bindtools).
 
