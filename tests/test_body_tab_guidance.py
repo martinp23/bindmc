@@ -22,11 +22,7 @@ def _state(
 def _model(*, valid=True, has_comp_concs=True):
     eq_str = "H + G <=> HG" if valid else ""
     binding_constants = [SimpleNamespace(logK=4.0)] if valid else [SimpleNamespace(logK=None)]
-    component_concs = (
-        pd.DataFrame({"H": [1e-3, 1e-3], "G": [0.0, 2e-3]})
-        if has_comp_concs
-        else pd.DataFrame()
-    )
+    component_concs = pd.DataFrame({"H": [1e-3, 1e-3], "G": [0.0, 2e-3]}) if has_comp_concs else pd.DataFrame()
     return SimpleNamespace(
         eq_str=eq_str,
         binding_constants=binding_constants,

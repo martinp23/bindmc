@@ -4,13 +4,12 @@ from nicegui import ui
 
 
 class BindMCHeader(BaseComponent):
-
     # (label, dialog_title, collection_attr, active_id_attr, name_attr, reason)
     _ROW_CONFIGS = [
-        ("Model:",      "Select Model",      "models",     "active_model_id",     "name",     "header_model_select"),
-        ("Raw data:",   "Select Raw Data",   "raw_datas",  "active_raw_data_id",  "filename", "header_raw_data_select"),
-        ("Data model:", "Select Data Model", "expt_datas", "active_expt_data_id", "name",     "header_data_model_select"),
-        ("Fit:",        "Select Fit",        "fits",       "active_fit_id",       "name",     "header_fit_select"),
+        ("Model:", "Select Model", "models", "active_model_id", "name", "header_model_select"),
+        ("Raw data:", "Select Raw Data", "raw_datas", "active_raw_data_id", "filename", "header_raw_data_select"),
+        ("Data model:", "Select Data Model", "expt_datas", "active_expt_data_id", "name", "header_data_model_select"),
+        ("Fit:", "Select Fit", "fits", "active_fit_id", "name", "header_fit_select"),
     ]
 
     def setup_nicegui(self):
@@ -31,9 +30,7 @@ class BindMCHeader(BaseComponent):
             dialog, radio = self._build_dialog(cfg)
             self._rows.append({"cfg": cfg, "dialog": dialog, "radio": radio})
 
-        with ui.header().classes(
-            "w-full flex justify-between items-center px-4 py-1 bg-black-600 text-white"
-        ):
+        with ui.header().classes("w-full flex justify-between items-center px-4 py-1 bg-black-600 text-white"):
             ui.label("BindMC GUI").classes("text-xl font-bold")
             with ui.column().classes("gap-0"):
                 for row in self._rows:
@@ -48,15 +45,11 @@ class BindMCHeader(BaseComponent):
             self._apply_visibility_states()
 
             with ui.row():
-                ui.button("New Project", on_click=self.sm.new_project).props(
-                    "unelevated color=primary"
-                ).classes("q-mx-xs")
-                ui.button("Open", on_click=self.sm.open_project).props(
-                    "unelevated color=secondary"
-                ).classes("q-mx-xs")
-                ui.button("Save", on_click=self.sm.save_project).props(
-                    "unelevated color=accent"
-                ).classes("q-mx-xs")
+                ui.button("New Project", on_click=self.sm.new_project).props("unelevated color=primary").classes(
+                    "q-mx-xs"
+                )
+                ui.button("Open", on_click=self.sm.open_project).props("unelevated color=secondary").classes("q-mx-xs")
+                ui.button("Save", on_click=self.sm.save_project).props("unelevated color=accent").classes("q-mx-xs")
 
     def _active_id_str(self, uid) -> str | None:
         return str(uid) if uid is not None else None
@@ -100,9 +93,16 @@ class BindMCHeader(BaseComponent):
 
     def setup_bindings(self):
         super().setup_bindings()
-        for event in ("model_changed", "expt_data_changed", "fit_changed",
-                      "fit_completed", "fit_deleted", "sim_changed",
-                      "data_imported", "active_context_changed"):
+        for event in (
+            "model_changed",
+            "expt_data_changed",
+            "fit_changed",
+            "fit_completed",
+            "fit_deleted",
+            "sim_changed",
+            "data_imported",
+            "active_context_changed",
+        ):
             self.sm.add_listener(event, self.refresh_ui_bindings)
 
     def refresh_ui_bindings(self, changes=None, *args):

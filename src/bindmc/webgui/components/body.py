@@ -55,9 +55,7 @@ def _compute_tab_disable_reasons(sm) -> dict[TabKey, list[str]]:
 
     active_expt = getattr(sm, "active_expt_data_or_none", None)
     has_expt_data = (
-        active_expt is not None
-        and getattr(active_expt, "data", None) is not None
-        and not active_expt.data.empty
+        active_expt is not None and getattr(active_expt, "data", None) is not None and not active_expt.data.empty
     )
     if not has_expt_data:
         msg = "Import/select experimental data first (Fit > Import data)."
@@ -109,7 +107,6 @@ def _format_disable_tooltip(reasons: list[str]) -> str:
 
 
 class Body(BaseComponent):
-    
     def setup_nicegui(self):
         self.tabs = {}
         self.components = {}
@@ -120,7 +117,7 @@ class Body(BaseComponent):
 
     def setup_bindings(self):
         super().setup_bindings()
-    
+
         self.sm.add_listener("data_imported", self.enable_disable_tabs)
         self.sm.add_listener("model_changed", self.enable_disable_tabs)
         self.sm.add_listener("model_parsed", self.enable_disable_tabs)
@@ -133,97 +130,78 @@ class Body(BaseComponent):
     def _generate_body(self):
         """Generate the body of the application."""
         with ui.row().classes("w-full flex-grow p-4"):
-            with ui.tabs().classes("w-full").on(
-                "update:model-value", self.sm.save_to_storage
-            ) as tabs_main:
-                self.tabs[('Simulate',)]=ui.tab("Simulate", icon="insights")
-                self.tabs[('Fit',)]=ui.tab("Fit", icon="model_training")
+            with ui.tabs().classes("w-full").on("update:model-value", self.sm.save_to_storage) as tabs_main:
+                self.tabs[("Simulate",)] = ui.tab("Simulate", icon="insights")
+                self.tabs[("Fit",)] = ui.tab("Fit", icon="model_training")
 
             with ui.tab_panels(tabs_main).classes("w-full"):
                 with ui.tab_panel("Simulate"):
-                    with ui.tabs().classes("w-full").on(
-                        "update:model-value", self.sim_tab_changed) as sim_tabs:
+                    with ui.tabs().classes("w-full").on("update:model-value", self.sim_tab_changed) as sim_tabs:
                         # self.tabs[('Simulate','Model Setup')]=ui.tab("Model Setup", icon="science")
-                        self.tabs[('Simulate','Binding model setup')]=ui.tab(
+                        self.tabs[("Simulate", "Binding model setup")] = ui.tab(
                             "Binding model setup", label="Define model", icon="settings"
                         )
-                        self.tabs[('Simulate','Data Generation')]=ui.tab("Data Generation", icon="add")
-                        self.tabs[('Simulate','Simulation')]=ui.tab("Simulation", icon="insights")
+                        self.tabs[("Simulate", "Data Generation")] = ui.tab("Data Generation", icon="add")
+                        self.tabs[("Simulate", "Simulation")] = ui.tab("Simulation", icon="insights")
 
                     with ui.tab_panels(sim_tabs).classes("w-full"):
                         with ui.tab_panel("Binding model setup"):
-                            self.components["model_setup"] = BindingModelPanel(
-                                self.sm, mode="sim"
-                            )
+                            self.components["model_setup"] = BindingModelPanel(self.sm, mode="sim")
 
                         with ui.tab_panel("Data Generation"):
-                            self.components["data_generation"] = DataGenerationPanel(
-                                self.sm
-                            )
+                            self.components["data_generation"] = DataGenerationPanel(self.sm)
 
                         with ui.tab_panel("Simulation"):
-                            self.components["simulation"] = SimulationPanel(
-                                self.sm
-                            )
+                            self.components["simulation"] = SimulationPanel(self.sm)
 
                 with ui.tab_panel("Fit"):
-                    with ui.tabs().classes("w-full").on(
-                        "update:model-value", self.fit_tab_changed
-                    ) as fit_tabs:
-                        self.tabs[('Fit','Binding model setup')]=ui.tab(
+                    with ui.tabs().classes("w-full").on("update:model-value", self.fit_tab_changed) as fit_tabs:
+                        self.tabs[("Fit", "Binding model setup")] = ui.tab(
                             "Binding model setup", label="Define model", icon="settings"
                         )
-                        self.tabs[('Fit','Data import')]=ui.tab("Data import", label="Import data", icon="file_upload")
-                        self.tabs[('Fit','Data model')]=ui.tab(
+                        self.tabs[("Fit", "Data import")] = ui.tab(
+                            "Data import", label="Import data", icon="file_upload"
+                        )
+                        self.tabs[("Fit", "Data model")] = ui.tab(
                             "Data model setup", label="Data model", icon="data_usage"
                         )
-                        self.tabs[('Fit','Fit results')]=ui.tab("Fit results", label="Results", icon="check_circle")
-                        self.tabs[('Fit','MCMC')]=ui.tab("MCMC", label="MCMC analysis", icon="calculate")
+                        self.tabs[("Fit", "Fit results")] = ui.tab("Fit results", label="Results", icon="check_circle")
+                        self.tabs[("Fit", "MCMC")] = ui.tab("MCMC", label="MCMC analysis", icon="calculate")
 
                     with ui.tab_panels(fit_tabs).classes("w-full"):
                         with ui.tab_panel("Binding model setup"):
-                            self.components["fit_binding_model"] = BindingModelPanel(
-                                self.sm, mode="fit"
-                            )
+                            self.components["fit_binding_model"] = BindingModelPanel(self.sm, mode="fit")
 
                         with ui.tab_panel("Data import"):
-                            self.components["data_import"] = DataImportPanel(
-                                self.sm
-                            )
+                            self.components["data_import"] = DataImportPanel(self.sm)
 
                         with ui.tab_panel("Data model setup"):
-                            self.components["data_model"] = DataModelPanel(
-                                self.sm
-                            )
+                            self.components["data_model"] = DataModelPanel(self.sm)
 
                         with ui.tab_panel("Fit results"):
-                            self.components["fit_results"] = FittingPanel(
-                                self.sm
-                            )
+                            self.components["fit_results"] = FittingPanel(self.sm)
 
                         with ui.tab_panel("MCMC"):
-                            self.components["mcmc"] = BayesPanel(
-                                self.sm
-                            )
+                            self.components["mcmc"] = BayesPanel(self.sm)
 
     def sim_tab_changed(self, e):
-        if e.args == 'Simulation':
+        if e.args == "Simulation":
             # Ensure the simulation graph is updated when switching to the Simulation tab
             self.components["simulation"].graph.update_graph()
         self.sm.save_to_storage()
 
     def fit_tab_changed(self, e):
-        if e.args == 'Data model setup':
+        if e.args == "Data model setup":
             # Ensure the data model is updated when switching to the Data model setup tab
             self.components["data_model"]._populate_blocks()
-        if e.args == 'Fit Results':
+        if e.args == "Fit Results":
             pass
             # Ensure the fit results graph is updated when switching to the Fit Results tab
             # self.components["fit_results"].graph.update_graph_x()
             # self.components["fit_results"].graph.graph.update()
         self.sm.save_to_storage()
 
-    def enable_disable_tabs(self,e=None):
+    def enable_disable_tabs(self, e=None):
         """Enable or disable tabs based on the current state."""
         reason_map = _compute_tab_disable_reasons(self.sm)
         tabs_to_disable = set(reason_map.keys())
@@ -260,12 +238,12 @@ class Body(BaseComponent):
                             "pointer-events:none;"
                         )
                     )
-                    tooltip = ui.tooltip(_format_disable_tooltip(reason_list)).style('white-space: pre-wrap')
+                    tooltip = ui.tooltip(_format_disable_tooltip(reason_list)).style("white-space: pre-wrap")
                 self._tab_help_cues[k] = cue
                 self._tab_tooltip_elements[k] = tooltip
             else:
                 print(f"Tab {k} not found in tabs dictionary.")
-    
+
     def enable_tabs(self, tab_keys: list[TabKey]) -> None:
         for k in tab_keys:
             if k in self.tabs:

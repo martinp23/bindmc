@@ -101,4 +101,3 @@ def test_fixed_shift_entries_remain_float():
     cell = matrix[0, 0]
     assert isinstance(cell, float)
     assert cell == 3.14
-

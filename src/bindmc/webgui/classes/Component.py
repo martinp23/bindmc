@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class Component:
     name: str = ""
-    start_conc: float|None = 0
-    end_conc: float|None = 0
+    start_conc: float | None = 0
+    end_conc: float | None = 0
     constant: bool = False
     _start_units: str = "mM"
     _end_units: str = "mM"
@@ -33,7 +34,7 @@ class Component:
         self.start_conc = value / factor if value is not None else None
 
     @property
-    def end_conc_nice(self) -> float|None:
+    def end_conc_nice(self) -> float | None:
         """Get end concentration in the specified units (user-friendly)."""
         factor = self.UNIT_CONVERSIONS.get(self.end_units, 1)
         return self.end_conc * factor if self.end_conc is not None else None
@@ -53,14 +54,10 @@ class Component:
     def start_units(self, value: str):
         """Set the start concentration units and recalculate start_conc."""
         oldunits = self._start_units
-        convfactor = self.UNIT_CONVERSIONS.get(value, 1) / self.UNIT_CONVERSIONS.get(
-            oldunits, 1
-        )
+        convfactor = self.UNIT_CONVERSIONS.get(value, 1) / self.UNIT_CONVERSIONS.get(oldunits, 1)
         self._start_units = value
 
-        self.start_conc = (
-            self.start_conc / convfactor if self.start_conc is not None else None
-        )
+        self.start_conc = self.start_conc / convfactor if self.start_conc is not None else None
 
     @property
     def end_units(self) -> str:
@@ -71,14 +68,10 @@ class Component:
     def end_units(self, value: str):
         """Set the end concentration units and recalculate end."""
         oldunits = self._end_units
-        convfactor = self.UNIT_CONVERSIONS.get(value, 1) / self.UNIT_CONVERSIONS.get(
-            oldunits, 1
-        )
+        convfactor = self.UNIT_CONVERSIONS.get(value, 1) / self.UNIT_CONVERSIONS.get(oldunits, 1)
         self._end_units = value
 
-        self.end_conc = (
-            self.end_conc / convfactor if self.end_conc is not None else None
-        )
+        self.end_conc = self.end_conc / convfactor if self.end_conc is not None else None
 
     # """Class to represent a component in the simulation."""
     # def __init__(self, name, start_conc=None, end_conc=None, constant=False, start_unit='mM', end_unit='mM'):
@@ -100,5 +93,3 @@ class Component:
     #         'start_unit': self.start_unit,
     #         'end_unit': self.end_unit
     #     }
-
-

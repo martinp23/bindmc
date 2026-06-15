@@ -21,8 +21,7 @@ __all__ = [
     "ExptData",
     "FitResult",
     "Simulation",
-    "MCMCSim", 
+    "MCMCSim",
     "ExptDataType",
-    "UIBindings" 
-
+    "UIBindings",
 ]

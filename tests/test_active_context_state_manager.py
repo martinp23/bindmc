@@ -30,8 +30,8 @@ class _FakeManager:
 
     def Queue(self):
         return queue.Queue()
-    
-    def Value(self,param,val):
+
+    def Value(self, param, val):
         return val
 
 

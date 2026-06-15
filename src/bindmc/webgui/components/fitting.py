@@ -5,28 +5,26 @@ import re
 import zipfile
 import numpy as np
 import pandas as pd
-from nicegui import ui,run,events
+from nicegui import ui, run, events
 
 import bindtools.binding as bd
 
 from .base import BaseComponent
 from .graph import Graph
 from ..classes import FitResult
-from ..utils import safe_filename,_infer_simple_fast_exchange_topology
+from ..utils import safe_filename, _infer_simple_fast_exchange_topology
 from functools import partial
 from typing import cast
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
 def _mapped_dependent_columns_for_fit(fit: FitResult) -> set[str]:
     """Infer which dependent columns are actually mapped for fitting."""
     expt = fit.expt_data
-    dep_cols = {
-        col for col in expt.columns
-        if expt.col_details.get(col, {}).get("depindep") == "dep"
-    }
+    dep_cols = {col for col in expt.columns if expt.col_details.get(col, {}).get("depindep") == "dep"}
     mapped_cols: set[str] = set()
 
     integ_to_spec = expt.integ_to_spec
@@ -61,7 +59,7 @@ def _prepare_fit_plot_frames(fit: FitResult) -> tuple[pd.DataFrame, pd.DataFrame
     # Start with columns that exist in both calc and expt.
     # calc_df.columns is the source of truth for what was actually computed by the fit.
     common_cols = [col for col in calc_df.columns if col in expt_df.columns]
-    
+
     # Remove columns with all NaN values
     common_cols = [col for col in common_cols if not calc_df[col].isna().all()]
     skipped_cols = [col for col in calc_df.columns if col not in common_cols]
@@ -79,8 +77,6 @@ def _prepare_fit_plot_frames(fit: FitResult) -> tuple[pd.DataFrame, pd.DataFrame
         expt_plot.iloc[:n_rows].reset_index(drop=True),
         skipped_cols,
     )
-
-
 
 
 def _infer_analytical_fast_exchange_config(model, expt_data, expt_dtypes: dict) -> dict[str, object] | None:
@@ -130,7 +126,7 @@ def _infer_analytical_fast_exchange_config(model, expt_data, expt_dtypes: dict) 
         return {
             "topology": topo_name,
             "complex_indices": complex_indices,
-            "obs_columns": [],   # no NMR shift columns
+            "obs_columns": [],  # no NMR shift columns
             "obs_components": [],
         }
 
@@ -236,11 +232,12 @@ class FittingPanel(BaseComponent):
             with ui.row():
                 with ui.card():
                     ui.label("Fitting options to go here.")
-                    self.fit_alg_select=ui.select(
+                    self.fit_alg_select = ui.select(
                         ["least_squares", "l-bfgs", "ampgo"],
                         label="Algorithm",
-                        on_change=lambda e: print(f"Selected: {e.value}"),value="least_squares",
-                    ).classes('w-full')
+                        on_change=lambda e: print(f"Selected: {e.value}"),
+                        value="least_squares",
+                    ).classes("w-full")
 
                 self.fit_results_card = FitResultsCard(state_manager=self.sm)
 
@@ -254,9 +251,7 @@ class FittingPanel(BaseComponent):
                     "Export to Notebook",
                     on_click=self.download_fit_notebook,
                 ).classes("mb-4")
-                self.delete_fit_dropdown = ui.dropdown_button(
-                    "Delete Fit", auto_close=True
-                ).classes("mb-4")
+                self.delete_fit_dropdown = ui.dropdown_button("Delete Fit", auto_close=True).classes("mb-4")
                 self.delete_fit_dropdown.clear()
                 with self.delete_fit_dropdown:
                     for fit in self.sm.fits.values():
@@ -269,19 +264,12 @@ class FittingPanel(BaseComponent):
             with ui.card().classes("w-full mb-4"):
                 ui.label("Fit Details")
                 with ui.row().classes("w-full"):
-                    self.fit_name_input = ui.input(
-                        "Fit Name", placeholder="Enter fit name"
-                    ).classes("flex-1")
-                    self.fit_comment_input = ui.input(
-                        "Comment", placeholder="Enter comment"
-                    ).classes("flex-1")
+                    self.fit_name_input = ui.input("Fit Name", placeholder="Enter fit name").classes("flex-1")
+                    self.fit_comment_input = ui.input("Comment", placeholder="Enter comment").classes("flex-1")
                     ui.button(
                         "Auto-generate title",
-                        on_click=lambda: self.fit_name_input.set_value(
-                            self.sm.active_model.name
-                            + " fit"
-                            )
-                        ).classes("ml-4")
+                        on_click=lambda: self.fit_name_input.set_value(self.sm.active_model.name + " fit"),
+                    ).classes("ml-4")
                     self.save_fit_details_button = ui.button(
                         "Save changes to name/comment", on_click=self.save_fit_details
                     ).classes("ml-4")
@@ -297,11 +285,11 @@ class FittingPanel(BaseComponent):
 
             with ui.card().classes("w-full mb-4").bind_visibility_from(self, "_dark_species_visible"):
                 ui.label("Dark / Silent Species").classes("text-base font-semibold mb-1")
-                ui.label(
-                    "Tick species whose ε / fluorescence amplitude is zero for each observable column."
-                ).classes("text-xs text-gray-500 mb-2")
+                ui.label("Tick species whose ε / fluorescence amplitude is zero for each observable column.").classes(
+                    "text-xs text-gray-500 mb-2"
+                )
                 self.dark_species_rows = ui.column().classes("w-full gap-1")
-        
+
         self._rebuild_dark_species_card()
         self.graphs = [self.fit_graph, self.speciation_graph]
 
@@ -358,6 +346,7 @@ class FittingPanel(BaseComponent):
                 with ui.row().classes("items-center gap-4 flex-wrap"):
                     ui.label(f"{prefix}: {col}").classes("font-medium w-40")
                     for sp in species:
+
                         def _toggle(e, _col=col, _sp=sp) -> None:
                             ed = self.sm.active_expt_data
                             d = list(ed.dark_species.get(_col, []))
@@ -371,22 +360,17 @@ class FittingPanel(BaseComponent):
                         ui.checkbox(sp, value=(sp in dark_set), on_change=_toggle).classes("text-sm")
 
     async def run_fit(self) -> None:
-        if  self.sm.active_expt_data_id is None:
+        if self.sm.active_expt_data_id is None:
             ui.notify("No experimental data loaded. Please import data first.", type="negative")
             return
 
         # Check if the simulation name looks auto-generated but doesn't match the current auto-generated value
-        auto_name = (
-            self.sm.active_model.name
-            + " "
-            + "fit"
-        )  # move to a function
-
+        auto_name = self.sm.active_model.name + " " + "fit"  # move to a function
 
         if (
-            self.sm.active_fit_id is not None and
-            hasattr(self.sm.active_fit,"name") and 
-            self.fit_name_input.value.startswith(self.sm.active_fit.name)
+            self.sm.active_fit_id is not None
+            and hasattr(self.sm.active_fit, "name")
+            and self.fit_name_input.value.startswith(self.sm.active_fit.name)
             and self.fit_name_input.value != auto_name
         ):
             with ui.dialog() as dialog, ui.card():
@@ -422,12 +406,9 @@ class FittingPanel(BaseComponent):
                     type="info",
                 )
 
-
         if any(fit.name == self.fit_name_input.value for fit in self.sm.fits.values()):
             with ui.dialog() as dialog, ui.card():
-                ui.label(
-                    f"A fit named '{self.fit_name_input.value}' already exists. Do you want to overwrite it?"
-                )
+                ui.label(f"A fit named '{self.fit_name_input.value}' already exists. Do you want to overwrite it?")
                 with ui.row():
                     ui.button("Overwrite", on_click=lambda: dialog.submit(True))
                     ui.button("Cancel", on_click=lambda: dialog.submit(False))
@@ -446,11 +427,7 @@ class FittingPanel(BaseComponent):
             else:
                 # Delete the existing simulation with that name
                 existing_fit = next(
-                    (
-                        fit
-                        for fit in self.sm.fits.values()
-                        if fit.name == self.fit_name_input.value
-                    ),
+                    (fit for fit in self.sm.fits.values() if fit.name == self.fit_name_input.value),
                     None,
                 )
                 if existing_fit:
@@ -459,8 +436,6 @@ class FittingPanel(BaseComponent):
                     f"Overwriting fit '{self.fit_name_input.value}'.",
                     type="info",
                 )
-
-
 
         analytical_cfg = _infer_analytical_fast_exchange_config(
             self.sm.active_model,
@@ -481,12 +456,21 @@ class FittingPanel(BaseComponent):
         try:
             # self.m1.prepModel()
             # set parameter values/limits here... later.
-            self.m1 = await run.cpu_bound(partial(self.m1.runModel,ret=True,skip_col=np.shape(self.sm.active_expt_data.col_to_comp)[0],method=str(self.fit_alg_select.value)))
+            self.m1 = await run.cpu_bound(
+                partial(
+                    self.m1.runModel,
+                    ret=True,
+                    skip_col=np.shape(self.sm.active_expt_data.col_to_comp)[0],
+                    method=str(self.fit_alg_select.value),
+                )
+            )
             if self.m1 is None:
                 ui.notify("Fit failed to run. Check the console for details.", type="negative")
                 return
 
-            calc_obs = await run.cpu_bound(partial(bd.getCalcData,self.m1)) # TODO resolve inconsistency between this and following line in bindtools
+            calc_obs = await run.cpu_bound(
+                partial(bd.getCalcData, self.m1)
+            )  # TODO resolve inconsistency between this and following line in bindtools
             speciation = await run.cpu_bound(self.m1.calcSpeciation)
 
             if self.m1.miniResult is None:
@@ -500,38 +484,49 @@ class FittingPanel(BaseComponent):
                 description=self.fit_comment_input.value,
                 aic=self.m1.miniResult.aic,
                 bic=self.m1.miniResult.bic,
-                chisqr= self.m1.miniResult.chisqr,
-                termination_message=self.m1.miniResult.message if hasattr(self.m1.miniResult, 'message') else "N/A", # type: ignore
-                success=getattr(self.m1.miniResult, 'success', None),
+                chisqr=self.m1.miniResult.chisqr,
+                termination_message=self.m1.miniResult.message if hasattr(self.m1.miniResult, "message") else "N/A",  # type: ignore
+                success=getattr(self.m1.miniResult, "success", None),
                 fit_method=str(self.fit_alg_select.value),
-                init_expt_data = self.sm.active_expt_data,
+                init_expt_data=self.sm.active_expt_data,
                 init_model=self.sm.active_model,
                 bd_model=self.m1,
                 analytical_fast_exchange=analytical_cfg is not None,
                 analytical_topology=(str(analytical_cfg["topology"]) if analytical_cfg is not None else None),
-                analytical_obs_columns=([str(x) for x in cast(list[str], analytical_cfg["obs_columns"])] if analytical_cfg is not None else []),
-                analytical_obs_components=([int(x) for x in cast(list[int], analytical_cfg["obs_components"])] if analytical_cfg is not None else []),
-                analytical_complex_indices=([int(x) for x in cast(list[int], analytical_cfg["complex_indices"])] if analytical_cfg is not None else []),
+                analytical_obs_columns=(
+                    [str(x) for x in cast(list[str], analytical_cfg["obs_columns"])]
+                    if analytical_cfg is not None
+                    else []
+                ),
+                analytical_obs_components=(
+                    [int(x) for x in cast(list[int], analytical_cfg["obs_components"])]
+                    if analytical_cfg is not None
+                    else []
+                ),
+                analytical_complex_indices=(
+                    [int(x) for x in cast(list[int], analytical_cfg["complex_indices"])]
+                    if analytical_cfg is not None
+                    else []
+                ),
             )
             self.sm.add_fit(new_fit)
-            
-            for k, v in self.m1.miniResult.params.items(): # type: ignore
+
+            for k, v in self.m1.miniResult.params.items():  # type: ignore
                 self.sm.active_fit.params[k] = {
                     "value": v.value,
                     "stderr": v.stderr,
                     "min": v.min,
                     "max": v.max,
                     "vary": v.vary,
-                    "initial_value": v.init_value
+                    "initial_value": v.init_value,
                 }
 
             self.sm.active_fit.calc_obs = pd.DataFrame(calc_obs, columns=self.m1.obsList)
 
-
             self.sm.active_fit.fit_speciation = pd.DataFrame(speciation, columns=[x + "_free" for x in self.sm.species])
 
-            self.sm.notify_listeners('redraw_fits_table')
-            self.sm.notify_listeners('fit_completed')
+            self.sm.notify_listeners("redraw_fits_table")
+            self.sm.notify_listeners("fit_completed")
             self._update_fit_graphs()
         except Exception:
             logger.exception("Fit run failed with an unhandled exception.")
@@ -539,13 +534,11 @@ class FittingPanel(BaseComponent):
         finally:
             self._set_fit_running(False)
 
-
- 
     def _update_fit_graphs(self, e=None) -> None:
         """Update the fit results display."""
         print("Updating fit results...")
         self.fit_graph.clear_graph(update=False)
-        if len(self.sm.fits)>0:
+        if len(self.sm.fits) > 0:
             self.speciation_graph.clear_graph(update=False)
             skipped_fit_names: list[str] = []
             for fit in self.sm.fits.values():
@@ -554,22 +547,16 @@ class FittingPanel(BaseComponent):
                     skipped_fit_names.append(fit.name)
                     continue
 
-                self.fit_graph.add_graph_lines_xy(x_plot, calc_plot,
-                                                run_name=fit.name,
-                                                run_id=fit.id,
-                                                scatter="lines")
-                self.fit_graph.add_graph_lines_xy(x_plot, expt_plot,
-                                                run_name=fit.name,
-                                                run_id=fit.id,
-                                                scatter="markers")
-                self.speciation_graph.add_graph_lines_xy(fit.comp_concs, fit.fit_speciation,
-                                                run_name=fit.name,
-                                                run_id=fit.id,
-                                                scatter="lines")
+                self.fit_graph.add_graph_lines_xy(x_plot, calc_plot, run_name=fit.name, run_id=fit.id, scatter="lines")
+                self.fit_graph.add_graph_lines_xy(
+                    x_plot, expt_plot, run_name=fit.name, run_id=fit.id, scatter="markers"
+                )
+                self.speciation_graph.add_graph_lines_xy(
+                    fit.comp_concs, fit.fit_speciation, run_name=fit.name, run_id=fit.id, scatter="lines"
+                )
             if skipped_fit_names:
                 ui.notify(
-                    "Skipped plotting non-fitted or invalid observable columns for: "
-                    + ", ".join(skipped_fit_names),
+                    "Skipped plotting non-fitted or invalid observable columns for: " + ", ".join(skipped_fit_names),
                     type="warning",
                 )
         self.sync_graphs()
@@ -580,16 +567,19 @@ class FittingPanel(BaseComponent):
         fits_to_delete = []
         skipped_plot_fits: list[str] = []
         for fit in self.sm.fits.values():
-            if hasattr(fit, "fit_speciation") and not fit.fit_speciation.empty and \
-                hasattr(fit, "calc_obs") and not fit.calc_obs.empty and \
-                    hasattr(fit, "comp_concs") and not fit.comp_concs.empty:
+            if (
+                hasattr(fit, "fit_speciation")
+                and not fit.fit_speciation.empty
+                and hasattr(fit, "calc_obs")
+                and not fit.calc_obs.empty
+                and hasattr(fit, "comp_concs")
+                and not fit.comp_concs.empty
+            ):
                 x_plot, calc_plot, expt_plot, _ = _prepare_fit_plot_frames(fit)
                 if calc_plot.empty:
                     skipped_plot_fits.append(fit.name)
                     continue
-                self.fit_graph.add_graph_lines_xy(
-                    x_plot, calc_plot, scatter="lines", run_name=fit.name, run_id=fit.id
-                )
+                self.fit_graph.add_graph_lines_xy(x_plot, calc_plot, scatter="lines", run_name=fit.name, run_id=fit.id)
                 self.fit_graph.add_graph_lines_xy(
                     x_plot, expt_plot, scatter="markers", run_name=fit.name, run_id=fit.id
                 )
@@ -602,8 +592,7 @@ class FittingPanel(BaseComponent):
                 ui.notify(f"Fit {fit.name} is missing data and will be deleted.", type="negative")
         if skipped_plot_fits:
             ui.notify(
-                "Skipped plotting non-fitted or invalid observable columns for: "
-                + ", ".join(skipped_plot_fits),
+                "Skipped plotting non-fitted or invalid observable columns for: " + ", ".join(skipped_plot_fits),
                 type="warning",
             )
         for fit in fits_to_delete:
@@ -632,7 +621,7 @@ class FittingPanel(BaseComponent):
 
     def sync_graphs(self) -> None:
         """Sync the graphs to the current state."""
-        
+
         for x in self.graphs:
             x.update_x_axis_selects()
             x.update_graph_x()
@@ -726,6 +715,7 @@ class FittingPanel(BaseComponent):
         ui.download.content(buf.read(), filename=zip_filename)
         ui.notify(f"Notebook exported as {zip_filename}.", type="positive")
 
+
 class FitResultsCard(BaseComponent):
     def setup_nicegui(self) -> None:
 
@@ -735,46 +725,46 @@ class FitResultsCard(BaseComponent):
                 ui.label("Results:")
                 self._show_params_cb = ui.checkbox("Show params", value=True, on_change=self._load_fits_to_table)
                 self._show_stats_cb = ui.checkbox("Show stats", value=False, on_change=self._load_fits_to_table)
-            with ui.element('div').classes("w-full overflow-x-auto"):
+            with ui.element("div").classes("w-full overflow-x-auto"):
                 self.default_columns = [
-                    {'name': 'name', 'label': 'Name', 'field': 'name', 'align': 'left'},
-                    {'name': 'K1', 'label': 'K1', 'field': 'K1'},
-                    {'name': 'chisqr', 'label': 'ChiSqr', 'field': 'chisqr'},
-                    {'name': 'aic', 'label': 'AIC', 'field': 'aic'},
-                    {'name': 'bic', 'label': 'BIC', 'field': 'bic'},
-                    {'name': 'message', 'label': 'Message', 'field': 'message'},
-                    {'name': 'fit_id', 'label': 'Fit ID', 'field': 'fit_id', 'classes': 'hidden','headerClasses': 'hidden'},
-                ]
-
-
-                rows = [
+                    {"name": "name", "label": "Name", "field": "name", "align": "left"},
+                    {"name": "K1", "label": "K1", "field": "K1"},
+                    {"name": "chisqr", "label": "ChiSqr", "field": "chisqr"},
+                    {"name": "aic", "label": "AIC", "field": "aic"},
+                    {"name": "bic", "label": "BIC", "field": "bic"},
+                    {"name": "message", "label": "Message", "field": "message"},
                     {
-                        'name': ''
-                    }
+                        "name": "fit_id",
+                        "label": "Fit ID",
+                        "field": "fit_id",
+                        "classes": "hidden",
+                        "headerClasses": "hidden",
+                    },
                 ]
 
-                self.table = ui.table(
-                    columns=self.default_columns,
-                    rows=rows,
-                    row_key='name'
-                )
+                rows = [{"name": ""}]
 
-                self.table.add_slot('header', r'''
+                self.table = ui.table(columns=self.default_columns, rows=rows, row_key="name")
+
+                self.table.add_slot(
+                    "header",
+                    r"""
     <q-tr :props="props">
         <q-th auto-width />
         <q-th v-for="col in props.cols" :key="col.name" :props="props" style="white-space:normal; word-break:break-all; max-width:64px">
             {{ col.label }}
         </q-th>
     </q-tr>
-''')
+""",
+                )
 
+                # self.add_body_slot()
+                self.table.on("delete", self.delete_row)
+                self.table.on("rename", self.rename_fit)
+                self.table.on("select", self.select_fit)
 
-                #self.add_body_slot()
-                self.table.on('delete', self.delete_row)
-                self.table.on('rename', self.rename_fit)
-                self.table.on('select', self.select_fit)
-# https://github.com/zauberzeug/nicegui/blob/main/examples/editable_table/main.py
-    
+    # https://github.com/zauberzeug/nicegui/blob/main/examples/editable_table/main.py
+
     def setup_bindings(self) -> None:
         super().setup_bindings()
         self.sm.add_listener("fits_loaded", self._load_fits_to_table)
@@ -783,24 +773,24 @@ class FitResultsCard(BaseComponent):
 
     def _load_fits_to_table(self, e=None) -> None:
         """Load fits into the table."""
-        show_params = getattr(self, '_show_params_cb', None)
+        show_params = getattr(self, "_show_params_cb", None)
         show_params = show_params.value if show_params is not None else True
-        show_stats = getattr(self, '_show_stats_cb', None)
+        show_stats = getattr(self, "_show_stats_cb", None)
         show_stats = show_stats.value if show_stats is not None else False
 
         self.table.rows = []
         fitParams = []
         for fit in self.sm.fits.values():
             if hasattr(fit, "params"):
-                fitParams+=[x for x in list(fit.params.keys()) if x[3:] not in fit.model.component_names]
-        
+                fitParams += [x for x in list(fit.params.keys()) if x[3:] not in fit.model.component_names]
+
         fitParams = list(dict.fromkeys(fitParams))  # Remove duplicates
 
-        paramCols = [{'name': param, 'label': param, 'field': param} for param in fitParams]
+        paramCols = [{"name": param, "label": param, "field": param} for param in fitParams]
 
-        stat_col_names = {'chisqr', 'aic', 'bic', 'message', 'covariance'}
-        stat_cols = [c for c in self.default_columns if c['name'] in stat_col_names]
-        hidden_cols = [c for c in self.default_columns if c.get('classes') == 'hidden']
+        stat_col_names = {"chisqr", "aic", "bic", "message", "covariance"}
+        stat_cols = [c for c in self.default_columns if c["name"] in stat_col_names]
+        hidden_cols = [c for c in self.default_columns if c.get("classes") == "hidden"]
 
         cols = [self.default_columns[0]]
         if show_params:
@@ -813,35 +803,36 @@ class FitResultsCard(BaseComponent):
 
         for fit in self.sm.fits.values():
             row = {
-                'name': fit.name,
-                'chisqr': self.rounded_value(fit.chisqr),
-                'aic': self.rounded_value(fit.aic, dp=1),
-                'bic': self.rounded_value(fit.bic, dp=1),
-                'message': fit.termination_message,
-                'fit_id': str(fit.id),
-                'is_active': str(fit.id) == str(self.sm.active_fit_id),
+                "name": fit.name,
+                "chisqr": self.rounded_value(fit.chisqr),
+                "aic": self.rounded_value(fit.aic, dp=1),
+                "bic": self.rounded_value(fit.bic, dp=1),
+                "message": fit.termination_message,
+                "fit_id": str(fit.id),
+                "is_active": str(fit.id) == str(self.sm.active_fit_id),
                 # 'covariance': fit.miniResult.covariance if hasattr(fit.miniResult, 'covariance') else 'N/A'
             }
             for param in fitParams:
                 if param in fit.params:
-                    row[param] = self.rounded_value(fit.params[param]['value'])
+                    row[param] = self.rounded_value(fit.params[param]["value"])
                 else:
-                    row[param] = 'N/A'
+                    row[param] = "N/A"
             self.table.rows.append(row)
         self.add_body_slot()
         self.table.update()
 
-    def rounded_value(self, value: float,dp: int=3) -> str:
+    def rounded_value(self, value: float, dp: int = 3) -> str:
         """Round the value for display."""
         if abs(value) >= 10000 or abs(value) < 0.001:
-            return f'{value:.4e}'
+            return f"{value:.4e}"
         else:
-            return f'{value:.{dp}f}' if isinstance(value, float) else str(value)
-        
+            return f"{value:.{dp}f}" if isinstance(value, float) else str(value)
 
     def add_body_slot(self) -> None:
         """Add the body slot for the table."""
-        self.table.add_slot('body', r'''
+        self.table.add_slot(
+            "body",
+            r"""
     <q-tr :props="props" :class="props.row.is_active ? 'bg-blue-1' : ''" @click="() => $parent.$emit('select', props.row)" style="cursor: pointer">
         <q-td auto-width >
             <q-btn size="xs" color="warning" round dense icon="delete"
@@ -855,28 +846,32 @@ class FitResultsCard(BaseComponent):
             >
                 <q-input v-model="scope.value" dense autofocus counter @keyup.enter="scope.set" />
             </q-popup-edit>
-        </q-td>'''+
-                ''.join(
-                    [f'''
-        <q-td key="{col['name']}" :props="props">
-            {{{{ props.row.{col['field']} }}}}
-            </q-td>''' for col in self.table.columns[1:]]
-                   ) +                     
-    '''</q-tr>
-''')
-        
+        </q-td>"""
+            + "".join(
+                [
+                    f'''
+        <q-td key="{col["name"]}" :props="props">
+            {{{{ props.row.{col["field"]} }}}}
+            </q-td>'''
+                    for col in self.table.columns[1:]
+                ]
+            )
+            + """</q-tr>
+""",
+        )
+
     def delete_row(self, e: events.GenericEventArguments) -> None:
         """Delete a row from the table."""
-        fit_id = uuid.UUID(e.args['fit_id'])
+        fit_id = uuid.UUID(e.args["fit_id"])
         fit = self.sm.fits.get(fit_id)
         if fit is None:
             return
         self.sm.delete_fit(fit)
-        self.sm.notify_listeners('fits_loaded')
-        self.sm.notify_listeners('fit_results_updated')
+        self.sm.notify_listeners("fits_loaded")
+        self.sm.notify_listeners("fit_results_updated")
 
     def select_fit(self, e: events.GenericEventArguments) -> None:
-        fit_id = uuid.UUID(e.args['fit_id'])
+        fit_id = uuid.UUID(e.args["fit_id"])
         if fit_id in self.sm.fits:
             self.sm.active_fit_id = fit_id
             self.sm.notify_listeners("fit_changed")

@@ -48,6 +48,7 @@ def _click_tab(driver, label: str) -> None:
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tab)
     tab.click()
     import time
+
     time.sleep(0.5)
 
 
@@ -116,8 +117,8 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui(screen: Screen, tmp_pat
     screen.find("BindMC GUI")
 
     # Build 1:1 model on the Fit side.
-    _click_tab(screen.selenium, 'Fit')
-    _click_tab(screen.selenium, 'Define model')
+    _click_tab(screen.selenium, "Fit")
+    _click_tab(screen.selenium, "Define model")
 
     screen.find("Add New Model").click()
     name_input = _first_visible(screen.selenium, By.CSS_SELECTOR, 'input[placeholder="Enter model name"]')
@@ -131,7 +132,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui(screen: Screen, tmp_pat
     _replace_text_input(logk_input, "5")
 
     # Import CSV with a host-tracked chemical-shift observable.
-    _click_tab(screen.selenium, 'Import data')
+    _click_tab(screen.selenium, "Import data")
     screen.find("Upload File").click()
     file_input = WebDriverWait(screen.selenium, 10).until(
         lambda d: (lambda items: items[-1] if items else False)(d.find_elements(By.CSS_SELECTOR, 'input[type="file"]'))
@@ -141,13 +142,20 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui(screen: Screen, tmp_pat
 
     # Mark dH as dependent + delta-h dtype (nmr_ppm).
     dep_label = WebDriverWait(screen.selenium, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//div[text()='dH']/ancestor::div[contains(@class,'q-card')][1]//div[contains(@class,'q-radio__label') and normalize-space()='Dependent variable']"))
+        EC.presence_of_element_located(
+            (
+                By.XPATH,
+                "//div[text()='dH']/ancestor::div[contains(@class,'q-card')][1]//div[contains(@class,'q-radio__label') and normalize-space()='Dependent variable']",
+            )
+        )
     )
     screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", dep_label)
     screen.selenium.execute_script("arguments[0].click();", dep_label)
 
     dtype_input = WebDriverWait(screen.selenium, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//div[text()='dH']/ancestor::div[contains(@class,'q-card')][1]//input[@aria-label='Data type']"))
+        EC.presence_of_element_located(
+            (By.XPATH, "//div[text()='dH']/ancestor::div[contains(@class,'q-card')][1]//input[@aria-label='Data type']")
+        )
     )
     screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", dtype_input)
     dtype_input.click()
@@ -157,7 +165,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui(screen: Screen, tmp_pat
 
     # Configure data model mapping for concentrations.
     # Fast-exchange expression should now auto-default for simple analytical 1:1.
-    _click_tab(screen.selenium, 'Data model')
+    _click_tab(screen.selenium, "Data model")
     h_map_input = _first_visible(
         screen.selenium, By.XPATH, "//div[normalize-space()='Component [H]_tot:']/following::input[@type='text'][1]"
     )
@@ -169,7 +177,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui(screen: Screen, tmp_pat
     screen.find("Apply Data Model").click()
 
     # Run fit and verify analytical parameter names (UI evidence for analytical backend path).
-    _click_tab(screen.selenium, 'Results')
+    _click_tab(screen.selenium, "Results")
     screen.find("Run Fit").click()
     screen.should_contain("Using analytical fast-exchange backend (1:1).")
     screen.should_contain("delta0_dH")

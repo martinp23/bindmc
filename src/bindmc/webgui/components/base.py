@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from ..state import StateManager
 
+
 class BaseComponent(ABC):
     """Base class for all UI components."""
 

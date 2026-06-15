@@ -1,15 +1,16 @@
 from nicegui import ui
 import asyncio
 
+
 # This function sets a numeric value in the NiceGUI UI and ensures the value change is processed correctly - especially important for elements that
 # have data bindings
-async def setNumberVal(user,marker,numberVal):
+async def setNumberVal(user, marker, numberVal):
     u = user.find(marker)
     for element in u.elements:
-        assert (isinstance(element, ui.number))
+        assert isinstance(element, ui.number)
         element.value = numberVal
-        if hasattr(element, '_handle_value_change'):
+        if hasattr(element, "_handle_value_change"):
             element._handle_value_change(numberVal)
-        await asyncio.sleep(0.05)        
+        await asyncio.sleep(0.05)
         # Verify the value was set
         assert element.value == numberVal

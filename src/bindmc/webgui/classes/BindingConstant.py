@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import  Optional
+from typing import Optional
+
 
 @dataclass
 class BindingConstant:
@@ -13,5 +14,3 @@ class BindingConstant:
     @property
     def name(self) -> str:
         return self.species
-
-

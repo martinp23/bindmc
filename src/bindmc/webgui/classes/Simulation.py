@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import asdict, dataclass, field
-from typing import  Optional
+from typing import Optional
 import pandas as pd
 from .BindingConstant import BindingConstant
 from .Model import Model
@@ -20,15 +20,9 @@ class Simulation:
         default_factory=pd.DataFrame, compare=False
     )  # compare=False means that __eq__ does not try to do a dataframe comparison, which tends to fail
     model_id: uuid.UUID | None = None  # The modelUID used for the simulation
-    params: list[BindingConstant] = field(
-        default_factory=list
-    )  # List of binding constants and other parameters
-    results: pd.DataFrame = field(
-        default_factory=pd.DataFrame
-    )  # DataFrame to hold output species concentrations
-    id: uuid.UUID = field(
-        default_factory=lambda: (uuid.uuid4())
-    )  # unique ID for the instance
+    params: list[BindingConstant] = field(default_factory=list)  # List of binding constants and other parameters
+    results: pd.DataFrame = field(default_factory=pd.DataFrame)  # DataFrame to hold output species concentrations
+    id: uuid.UUID = field(default_factory=lambda: uuid.uuid4())  # unique ID for the instance
     comment: str = ""  # Optional comment for the simulation
     name: str = ""
 
@@ -37,8 +31,8 @@ class Simulation:
         if not isinstance(self.id, uuid.UUID):
             if isinstance(self.id, str):
                 self.id = uuid.UUID(self.id)
-        
-        if not isinstance(self.model_id,uuid.UUID):
+
+        if not isinstance(self.model_id, uuid.UUID):
             if isinstance(self.model_id, str):
                 self.model_id = uuid.UUID(self.model_id)
 
@@ -48,20 +42,12 @@ class Simulation:
         if isinstance(self.results, pd.DataFrame):
             self.results = self.results.copy()
 
-    def to_dict(self) -> dict[str, str|dict|list]:
+    def to_dict(self) -> dict[str, str | dict | list]:
         return {
-            "comp_concs": (
-                self.comp_concs.to_dict()
-                if isinstance(self.comp_concs, pd.DataFrame)
-                else {}
-            ),
+            "comp_concs": (self.comp_concs.to_dict() if isinstance(self.comp_concs, pd.DataFrame) else {}),
             "model_id": str(self.model_id) if self.model_id else "",
             "params": [asdict(k) for k in self.params] if len(self.params) > 0 else [],
-            "results": (
-                self.results.to_dict(orient="list")
-                if isinstance(self.results, pd.DataFrame)
-                else {}
-            ),
+            "results": (self.results.to_dict(orient="list") if isinstance(self.results, pd.DataFrame) else {}),
             "id": str(self.id),
             "comment": self.comment,
             "name": self.name,
@@ -82,7 +68,7 @@ class Simulation:
             self.model_id = None
             self._model = None
 
-    def find_and_link_model(self, models: Optional[dict[uuid.UUID,Model]] = None) -> None:
+    def find_and_link_model(self, models: Optional[dict[uuid.UUID, Model]] = None) -> None:
         """Set the model for this simulation."""
         if models is not None:
             if self.model_id in models and self.model_id is not None:
@@ -90,11 +76,8 @@ class Simulation:
             else:
                 raise ValueError(f"Corresponding model {self.model_id} not found for Simulation.")
 
-
-
-    def __eq__(self,other):
+    def __eq__(self, other):
         if not isinstance(other, Simulation):
             return False
-        
-        return self.id == other.id
 
+        return self.id == other.id

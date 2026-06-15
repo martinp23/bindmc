@@ -131,6 +131,7 @@ def test_prepare_fit_plot_frames_isolated_when_expt_data_mutates():
     x_plot, calc_plot, expt_plot, skipped = _prepare_fit_plot_frames(fit1)
 
     # fit1 produced both obs_a and obs_b in calc_obs, so they should both be plotted
-    assert set(calc_plot.columns) == {"obs_a", "obs_b"}, \
+    assert set(calc_plot.columns) == {"obs_a", "obs_b"}, (
         f"fit1 should plot both columns it produced, but got {list(calc_plot.columns)}"
+    )
     assert len(x_plot) == len(calc_plot) == len(expt_plot)

@@ -1,4 +1,5 @@
 """Tests for Jupyter notebook export functionality (TDD — write first, implement after)."""
+
 import tempfile
 from types import SimpleNamespace
 
@@ -13,6 +14,7 @@ from bindmc.webgui.classes import Simulation
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _load_state_1to1() -> StateManager:
     sm = StateManager(load_prior_state=False)
@@ -30,14 +32,12 @@ def _make_test_sim(model) -> Simulation:
     h_conc = 0.005
     g_concs = np.linspace(0.0, 0.02, n_steps)
     comp_concs = pd.DataFrame(
-        {f"{model.component_names[0]}_tot": np.full(n_steps, h_conc),
-         f"{model.component_names[1]}_tot": g_concs}
+        {f"{model.component_names[0]}_tot": np.full(n_steps, h_conc), f"{model.component_names[1]}_tot": g_concs}
     )
 
     logK_vals = np.array([bc.logK for bc in model.binding_constants])
     rows = [
-        bd.getConcs(model.eq_mat, np.array([row.iloc[0], row.iloc[1]]), logK_vals)
-        for _, row in comp_concs.iterrows()
+        bd.getConcs(model.eq_mat, np.array([row.iloc[0], row.iloc[1]]), logK_vals) for _, row in comp_concs.iterrows()
     ]
     results = pd.DataFrame(np.array(rows), columns=model.species)
 
@@ -53,6 +53,7 @@ def _make_test_sim(model) -> Simulation:
 # ---------------------------------------------------------------------------
 # Simulation notebook tests
 # ---------------------------------------------------------------------------
+
 
 def test_sim_notebook_structure():
     sm = _load_state_1to1()
@@ -95,9 +96,7 @@ def test_sim_notebook_is_executable():
 
     notebook = sm.dump_simulation_notebook(sim)
 
-    code = "\n".join(
-        c["source"] for c in notebook["cells"] if c["cell_type"] == "code"
-    )
+    code = "\n".join(c["source"] for c in notebook["cells"] if c["cell_type"] == "code")
     # Suppress any GUI calls that don't make sense in a test
     code = code.replace("plt.show()", "# plt.show()")
 
@@ -114,6 +113,7 @@ def test_sim_notebook_is_executable():
 # ---------------------------------------------------------------------------
 # Fit notebook tests
 # ---------------------------------------------------------------------------
+
 
 def test_fit_notebook_structure():
     sm = _load_state_1to1()
@@ -200,6 +200,7 @@ def test_fit_notebook_uses_initial_values_for_params():
 # MCMC notebook tests
 # ---------------------------------------------------------------------------
 
+
 def test_mcmc_notebook_structure_code_only():
     """export_mcmc_notebook with include_chains=False produces a valid notebook with live MCMC code."""
     sm = _load_state_1to1()
@@ -248,9 +249,7 @@ def test_mcmc_notebook_inherits_fit_cells():
     sm = _load_state_1to1()
     notebook, _, _ = sm.dump_mcmc_notebook(mcmc=None, include_chains=False)
 
-    all_code = "\n".join(
-        c["source"] for c in notebook["cells"] if c["cell_type"] == "code"
-    )
+    all_code = "\n".join(c["source"] for c in notebook["cells"] if c["cell_type"] == "code")
 
     # Fit cells are present
     assert "runModel" in all_code
@@ -262,9 +261,7 @@ def test_mcmc_notebook_default_walker_count():
     sm = _load_state_1to1()
     notebook, _, _ = sm.dump_mcmc_notebook(mcmc=None, include_chains=False)
 
-    all_code = "\n".join(
-        c["source"] for c in notebook["cells"] if c["cell_type"] == "code"
-    )
+    all_code = "\n".join(c["source"] for c in notebook["cells"] if c["cell_type"] == "code")
 
     assert "n_walkers = 50" in all_code
 
@@ -310,6 +307,7 @@ def test_mcmc_notebook_exported_hdf_bytes_reopen_cleanly():
 # UV-vis / fluorescence linear observable tests
 # ---------------------------------------------------------------------------
 
+
 def _make_minimal_uvvis_fit():
     """Return (fit, model, expt_data, raw_data, lin_obs_col_names, lin_obs_param_map).
 
@@ -322,6 +320,7 @@ def _make_minimal_uvvis_fit():
     from bindmc.webgui.classes.FitResult import FitResult
 
     from bindmc.webgui.classes.BindingConstant import BindingConstant as BC
+
     model = Model(
         name="1:1 UV-vis",
         component_names=["H", "G"],
@@ -332,11 +331,13 @@ def _make_minimal_uvvis_fit():
 
     raw = RawData(
         filename="test_uvvis.csv",
-        data=pd.DataFrame({
-            "H_conc": np.linspace(1e-4, 1e-4, 10),
-            "G_conc": np.linspace(0.0, 2e-4, 10),
-            "absorbance": np.linspace(0.1, 0.5, 10),
-        }),
+        data=pd.DataFrame(
+            {
+                "H_conc": np.linspace(1e-4, 1e-4, 10),
+                "G_conc": np.linspace(0.0, 2e-4, 10),
+                "absorbance": np.linspace(0.1, 0.5, 10),
+            }
+        ),
     )
 
     expt_data = ExptData(
@@ -363,12 +364,33 @@ def _make_minimal_uvvis_fit():
         termination_message="",
         success=True,
         params={
-            "logH":  {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
-            "logG":  {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
-            "logHG": {"value": 6.0, "initial_value": 4.0, "vary": True,  "min": 0.0, "max": 14.0, "stderr": 0.05},
-            "eps_H_absorbance":  {"value": 1000.0, "initial_value": 800.0, "vary": True, "min": 0.1, "max": 1e6, "stderr": 10.0},
-            "eps_G_absorbance":  {"value": 0.0,    "initial_value": 0.0,   "vary": False, "min": -1e-9, "max": 1e-9, "stderr": None},
-            "eps_HG_absorbance": {"value": 5000.0, "initial_value": 3000.0, "vary": True, "min": 0.1, "max": 1e6, "stderr": 50.0},
+            "logH": {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
+            "logG": {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
+            "logHG": {"value": 6.0, "initial_value": 4.0, "vary": True, "min": 0.0, "max": 14.0, "stderr": 0.05},
+            "eps_H_absorbance": {
+                "value": 1000.0,
+                "initial_value": 800.0,
+                "vary": True,
+                "min": 0.1,
+                "max": 1e6,
+                "stderr": 10.0,
+            },
+            "eps_G_absorbance": {
+                "value": 0.0,
+                "initial_value": 0.0,
+                "vary": False,
+                "min": -1e-9,
+                "max": 1e-9,
+                "stderr": None,
+            },
+            "eps_HG_absorbance": {
+                "value": 5000.0,
+                "initial_value": 3000.0,
+                "vary": True,
+                "min": 0.1,
+                "max": 1e6,
+                "stderr": 50.0,
+            },
         },
         init_model=model,
         init_expt_data=expt_data,
@@ -377,9 +399,9 @@ def _make_minimal_uvvis_fit():
     lin_obs_col_names = ["absorbance"]
     lin_obs_param_map = [
         [
-            {"name": "eps_H_absorbance",  "min": 0.1,   "max": 1e6},
-            {"name": "eps_G_absorbance",  "min": -1e-9, "max": 1e-9},
-            {"name": "eps_HG_absorbance", "min": 0.1,   "max": 1e6},
+            {"name": "eps_H_absorbance", "min": 0.1, "max": 1e6},
+            {"name": "eps_G_absorbance", "min": -1e-9, "max": 1e-9},
+            {"name": "eps_HG_absorbance", "min": 0.1, "max": 1e6},
         ]
     ]
 
@@ -397,7 +419,11 @@ def test_fit_notebook_uvvis_numerical():
     obs_type_names = [expt_data.col_details[col]["dtype"] for col in expt_data.sorted_data.columns]
 
     notebook, _ = export_fit_notebook(
-        fit, model, expt_data, raw, obs_type_names=obs_type_names,
+        fit,
+        model,
+        expt_data,
+        raw,
+        obs_type_names=obs_type_names,
         lin_obs_col_names=lin_obs_col_names,
         lin_obs_param_map=lin_obs_param_map,
     )
@@ -434,7 +460,11 @@ def test_fit_notebook_uvvis_analytical():
     obs_type_names = [expt_data.col_details[col]["dtype"] for col in expt_data.sorted_data.columns]
 
     notebook, _ = export_fit_notebook(
-        fit, model, expt_data, raw,obs_type_names=obs_type_names,
+        fit,
+        model,
+        expt_data,
+        raw,
+        obs_type_names=obs_type_names,
         lin_obs_col_names=lin_obs_col_names,
         lin_obs_param_map=lin_obs_param_map,
     )
@@ -458,6 +488,7 @@ def test_fit_notebook_uvvis_via_state_manager():
     sm = StateManager(load_prior_state=False)
 
     from bindmc.webgui.classes.BindingConstant import BindingConstant as BC
+
     model = Model(
         name="1:1 UV-vis SM",
         component_names=["H", "G"],
@@ -469,11 +500,13 @@ def test_fit_notebook_uvvis_via_state_manager():
 
     raw = RawData(
         filename="sm_uvvis.csv",
-        data=pd.DataFrame({
-            "H_conc": np.full(10, 1e-4),
-            "G_conc": np.linspace(0.0, 2e-4, 10),
-            "absorbance": np.linspace(0.1, 0.5, 10),
-        }),
+        data=pd.DataFrame(
+            {
+                "H_conc": np.full(10, 1e-4),
+                "G_conc": np.linspace(0.0, 2e-4, 10),
+                "absorbance": np.linspace(0.1, 0.5, 10),
+            }
+        ),
     )
     sm.raw_datas[raw.id] = raw
 
@@ -483,9 +516,9 @@ def test_fit_notebook_uvvis_via_state_manager():
         init_raw_data=raw,
         col_to_comp=np.array([[1, 0], [0, 1]], dtype=float),
         col_details={
-            "H_conc":      {"depindep": "indep", "dtype": "conc"},
-            "G_conc":      {"depindep": "indep", "dtype": "conc"},
-            "absorbance":  {"depindep": "dep",   "dtype": "absorbance"},
+            "H_conc": {"depindep": "indep", "dtype": "conc"},
+            "G_conc": {"depindep": "indep", "dtype": "conc"},
+            "absorbance": {"depindep": "dep", "dtype": "absorbance"},
         },
         selected_columns=["H_conc", "G_conc", "absorbance"],
     )
@@ -505,11 +538,25 @@ def test_fit_notebook_uvvis_via_state_manager():
         termination_message="",
         success=True,
         params={
-            "logH":  {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
-            "logG":  {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
-            "logHG": {"value": 6.0, "initial_value": 4.0, "vary": True,  "min": 0.0,  "max": 14.0, "stderr": 0.05},
-            "eps_H_absorbance":  {"value": 1000.0, "initial_value": 800.0,  "vary": True,  "min": 0.1,   "max": 1e6,  "stderr": 10.0},
-            "eps_HG_absorbance": {"value": 5000.0, "initial_value": 3000.0, "vary": True,  "min": 0.1,   "max": 1e6,  "stderr": 50.0},
+            "logH": {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
+            "logG": {"value": 0.0, "initial_value": 0.0, "vary": False, "min": -2.0, "max": 2.0, "stderr": None},
+            "logHG": {"value": 6.0, "initial_value": 4.0, "vary": True, "min": 0.0, "max": 14.0, "stderr": 0.05},
+            "eps_H_absorbance": {
+                "value": 1000.0,
+                "initial_value": 800.0,
+                "vary": True,
+                "min": 0.1,
+                "max": 1e6,
+                "stderr": 10.0,
+            },
+            "eps_HG_absorbance": {
+                "value": 5000.0,
+                "initial_value": 3000.0,
+                "vary": True,
+                "min": 0.1,
+                "max": 1e6,
+                "stderr": 50.0,
+            },
         },
         init_model=model,
         init_expt_data=expt_data,
@@ -533,9 +580,7 @@ def test_fit_notebook_no_linear_obs_unaffected():
 
     notebook, _ = sm.dump_fit_notebook(fit)
 
-    all_code = "\n".join(
-        c["source"] for c in notebook["cells"] if c["cell_type"] == "code"
-    )
+    all_code = "\n".join(c["source"] for c in notebook["cells"] if c["cell_type"] == "code")
 
     assert "specToLinear" not in all_code
     assert "analytical_linear_obs_param_map" not in all_code

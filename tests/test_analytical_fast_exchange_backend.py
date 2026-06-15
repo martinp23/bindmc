@@ -29,10 +29,7 @@ def _build_state(
     model.binding_constants = [
         BindingConstant(species="H", logK=0.0, vary=False, isComp=True),
         BindingConstant(species="G", logK=0.0, vary=False, isComp=True),
-        *[
-            BindingConstant(species=s, logK=4.0, vary=True, isComp=False)
-            for s in species[2:]
-        ],
+        *[BindingConstant(species=s, logK=4.0, vary=True, isComp=False) for s in species[2:]],
     ]
     sm.add_model(model)
 

@@ -8,18 +8,19 @@ from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
 import filecmp
 
+
 def test_simulation_workflow_screen(screen: Screen) -> None:
     # Open root
-    screen.open('/')
+    screen.open("/")
     # Require Chrome for stable headless downloads
-    caps = getattr(screen.selenium, 'capabilities', {}) or {}
-    browser_name = str(caps.get('browserName', '')).lower()
-    if 'chrome' not in browser_name:
-        pytest.skip('Download verification requires Chrome driver')
+    caps = getattr(screen.selenium, "capabilities", {}) or {}
+    browser_name = str(caps.get("browserName", "")).lower()
+    if "chrome" not in browser_name:
+        pytest.skip("Download verification requires Chrome driver")
 
     screen.selenium.set_window_size(1920, 1080)
     # Configure download path for headless Chrome using CDP
-    download_dir = os.path.join(os.getcwd(), 'tests', 'downloads')
+    download_dir = os.path.join(os.getcwd(), "tests", "downloads")
     os.makedirs(download_dir, exist_ok=True)
     try:
         screen.selenium.execute_cdp_cmd(
@@ -29,115 +30,117 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     except Exception:
         pass
     # Basic presence check (header label)
-    screen.find('BindMC GUI')
+    screen.find("BindMC GUI")
 
     # Navigate to Model Setup
-    screen.find('Simulate').click()
-    screen.find('Define model').click()
-    screen.shot('simulation_model_setup',failed=False)
+    screen.find("Simulate").click()
+    screen.find("Define model").click()
+    screen.shot("simulation_model_setup", failed=False)
     # Enter equilibrium equations and parse (use marker for unique selection)
     screen.find("Add New Model").click()
     name_input = WebDriverWait(screen.selenium, 10).until(
-        lambda d: next((el for el in d.find_elements(By.CSS_SELECTOR, 'input[placeholder="Enter model name"]') if el.is_displayed()), False)
+        lambda d: next(
+            (
+                el
+                for el in d.find_elements(By.CSS_SELECTOR, 'input[placeholder="Enter model name"]')
+                if el.is_displayed()
+            ),
+            False,
+        )
     )
     name_input.click()
-    name_input.send_keys(Keys.CONTROL, 'a')
+    name_input.send_keys(Keys.CONTROL, "a")
     name_input.send_keys(Keys.BACKSPACE)
-    name_input.send_keys('Test Model')
+    name_input.send_keys("Test Model")
     screen.find("Create").click()
-    screen.shot('simulation_model_setup_1',failed=False)
+    screen.shot("simulation_model_setup_1", failed=False)
 
-    #screen.type((Keys.CONTROL, 'a'))
+    # screen.type((Keys.CONTROL, 'a'))
 
     el = screen.selenium.find_element(By.CSS_SELECTOR, '[aria-label="Equilibrium Equations"]')
     el.click()
-    screen.type('H + G <=> HG')    
-    screen.find('Parse Equations').click()
+    screen.type("H + G <=> HG")
+    screen.find("Parse Equations").click()
 
     try:
-        screen.should_contain('H + G ⇋ HG' or 'G + H ⇋ HG')
+        screen.should_contain("H + G ⇋ HG" or "G + H ⇋ HG")
     except AssertionError:
         try:
-            screen.should_contain('G + H ⇋ HG')
+            screen.should_contain("G + H ⇋ HG")
         except AssertionError:
             raise
 
-        
-
     el = screen.selenium.find_element(By.CSS_SELECTOR, '[placeholder="Enter binding constant"]')
     el.click()
-    screen.type('4')
+    screen.type("4")
 
     # Go to Data Generation tab
-    screen.find('Data Generation').click()
+    screen.find("Data Generation").click()
     screen.wait(0.5)
-    screen.should_contain('Data Generation Panel')
+    screen.should_contain("Data Generation Panel")
 
     # Set number of steps and component concentrations
     el = screen.selenium.find_element(By.CSS_SELECTOR, '[aria-label="Number of steps"]')
-    el.send_keys(Keys.CONTROL, 'a')
+    el.send_keys(Keys.CONTROL, "a")
     el.send_keys(Keys.BACKSPACE)
     el.click()
-    screen.type('40')    
+    screen.type("40")
 
+    screen.should_contain_input("H")
 
-    screen.should_contain_input('H')
-    
     # Updated selector to match the actual input for "Component 1" name
     el = screen.selenium.find_element(
-        By.XPATH,
-        "//div[contains(text(), 'Component 1')]/following::input[@type='text' and @aria-label='Name'][1]"
+        By.XPATH, "//div[contains(text(), 'Component 1')]/following::input[@type='text' and @aria-label='Name'][1]"
     )
     el.click()
 
     # Re-locate the element just before interacting to avoid stale reference
-   # el = screen.selenium.find_element(By.XPATH, "//input[contains(@value, 'H') or contains(@aria-label, 'H') or contains(@placeholder, 'H')]")
-    #el.click()
+    # el = screen.selenium.find_element(By.XPATH, "//input[contains(@value, 'H') or contains(@aria-label, 'H') or contains(@placeholder, 'H')]")
+    # el.click()
     el.send_keys(Keys.TAB)
-    screen.type(Keys.SPACE) # activate fixed concentration checkbox
+    screen.type(Keys.SPACE)  # activate fixed concentration checkbox
     screen.type(Keys.TAB)
-    screen.type('5') # conc
+    screen.type("5")  # conc
 
     screen.type(Keys.TAB)  # units
     screen.type(Keys.TAB)  # next component label (G)
-    screen.type(Keys.TAB) # checkbox
+    screen.type(Keys.TAB)  # checkbox
     screen.type(Keys.TAB)  # start conc
-    screen.type('0')  # start conc value
+    screen.type("0")  # start conc value
     screen.type(Keys.TAB)  # units
     screen.type(Keys.TAB)  # end conc
-    screen.type('20')  # end conc value
+    screen.type("20")  # end conc value
 
-    screen.find('Generate Component Concentrations').click()
+    screen.find("Generate Component Concentrations").click()
 
     # Switch to Simulation tab and run
-    simulation_tab = screen.selenium.find_element(By.XPATH, "//div[contains(@class, 'q-tab__label') and text()='Simulation']")
+    simulation_tab = screen.selenium.find_element(
+        By.XPATH, "//div[contains(@class, 'q-tab__label') and text()='Simulation']"
+    )
     screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", simulation_tab)
     simulation_tab.click()
 
-    
-    screen.find('Run Simulation').click()
+    screen.find("Run Simulation").click()
     screen.find("Use auto-generated name").click()
     # Expect success notification
-    screen.should_contain('completed successfully')
- 
+    screen.should_contain("completed successfully")
+
     # Wait for Plotly to render the simulation results graph title
-    WebDriverWait(screen.selenium, 10).until(
-        lambda d: "Simulation Results" in d.page_source
-    )
-    screen.should_contain('Test Model HG=4.0')
-    screen.shot('simulation_results',failed=False)
+    WebDriverWait(screen.selenium, 10).until(lambda d: "Simulation Results" in d.page_source)
+    screen.should_contain("Test Model HG=4.0")
+    screen.shot("simulation_results", failed=False)
     # Download the simulation data CSV
-    screen.find('Download Simulation Data').click()
+    screen.find("Download Simulation Data").click()
 
     # Wait for the download and get the file path
 
-    download_dir = os.path.join(os.getcwd(), 'tests', 'downloads')    
+    download_dir = os.path.join(os.getcwd(), "tests", "downloads")
     timeout_s = 10
     csv_file = None
     end_time = time.time() + timeout_s
     while time.time() < end_time:
         # Prefer finished .csv, otherwise check for .crdownload in progress
-        files = glob.glob(os.path.join(download_dir, 'simulation_*_data.csv'))
+        files = glob.glob(os.path.join(download_dir, "simulation_*_data.csv"))
         if files:
             candidate = max(files, key=os.path.getctime)
             # ensure file is non-empty and stable across a short interval
@@ -148,11 +151,11 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
                 csv_file = candidate
                 break
         time.sleep(0.2)
-    assert csv_file is not None, 'CSV file was not downloaded'
+    assert csv_file is not None, "CSV file was not downloaded"
 
     # # Compare to reference file
-    ref_dir = os.path.join(os.getcwd(), 'tests', 'references')   
-    ref_csv = os.path.join(ref_dir, 'sim_1to1_4.csv')
+    ref_dir = os.path.join(os.getcwd(), "tests", "references")
+    ref_csv = os.path.join(ref_dir, "sim_1to1_4.csv")
     assert filecmp.cmp(csv_file, ref_csv, shallow=False), "Downloaded CSV does not match reference"
 
     # Teardown: delete the downloaded CSV file

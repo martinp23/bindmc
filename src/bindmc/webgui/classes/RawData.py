@@ -7,7 +7,7 @@ import pandas as pd
 class RawData:
     filename: str = ""
     data: pd.DataFrame = field(default_factory=pd.DataFrame, compare=False)
-    id: uuid.UUID = field(default_factory= lambda: uuid.uuid4())
+    id: uuid.UUID = field(default_factory=lambda: uuid.uuid4())
 
     def __post_init__(self):
         """Ensure data are appropriate types."""
@@ -15,17 +15,10 @@ class RawData:
             if isinstance(self.id, str):
                 self.id = uuid.UUID(self.id)
 
-
-    def to_dict(self) -> dict[str, str|dict]:
+    def to_dict(self) -> dict[str, str | dict]:
         """Convert RawData to a dictionary."""
         return {
             "filename": self.filename,
-            "data": (
-                self.data.to_dict(orient="list")
-                if isinstance(self.data, pd.DataFrame)
-                else {}
-            ),
+            "data": (self.data.to_dict(orient="list") if isinstance(self.data, pd.DataFrame) else {}),
             "id": str(self.id) if self.id else "",
         }
-
-

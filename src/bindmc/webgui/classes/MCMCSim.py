@@ -15,33 +15,30 @@ from .Model import Model
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MCMCSim:
     """Data class to represent a MCMC simulation."""
+
     nwalkers: int = 100
     nsteps_target: int = 1000
 
     burn: int = 100
     thin: int = 1
     seed: Optional[int] = None
-    chains: np.ndarray = field(
-        default_factory=lambda: np.array([])
-    )  # Array to hold the MCMC chains
+    chains: np.ndarray = field(default_factory=lambda: np.array([]))  # Array to hold the MCMC chains
     priors: list[dict[str, Any]] = field(default_factory=list)
     model_id: Optional[uuid.UUID] = None
     expt_data_id: Optional[uuid.UUID] = None
     nsteps_done: int = 0
     bd_model: Optional[bd.bindingModel] = None
 
-
     model: InitVar[Optional[Model]] = None
     expt_data: InitVar[Optional[ExptData]] = None
 
-    id: uuid.UUID = field(
-        default_factory=lambda: (uuid.uuid4())
-    )  # unique ID for the instance
+    id: uuid.UUID = field(default_factory=lambda: uuid.uuid4())  # unique ID for the instance
 
-    def __post_init__(self,model,expt_data) -> None:
+    def __post_init__(self, model, expt_data) -> None:
         """Ensure data are appropriate types."""
         if not isinstance(self.id, uuid.UUID):
             if isinstance(self.id, str):
@@ -55,9 +52,7 @@ class MCMCSim:
             params = prior.get("params")
             if not isinstance(params, dict):
                 params = {
-                    key: prior.get(key)
-                    for key in ("lower", "upper", "mu", "sigma")
-                    if prior.get(key) is not None
+                    key: prior.get(key) for key in ("lower", "upper", "mu", "sigma") if prior.get(key) is not None
                 }
             prior_specs.append(
                 {
@@ -67,27 +62,26 @@ class MCMCSim:
                 }
             )
         self.priors = prior_specs
-        
+
         if model is not None:
             self.model_id = model.id
             self._model = model
         else:
-            self._model = None 
+            self._model = None
         if expt_data is not None:
             self.expt_data_id = expt_data.id
             self._expt_data = expt_data
         else:
             self._expt_data = None
-        
+
         manager = Manager()
         self.cancel_event = manager.Event()
         self.q_percent_done = manager.Queue()
         self.q2_tqdm_out = manager.Queue()
         self.q3_samples = manager.Queue()
-        self.chunk_size_val = manager.Value('i', 100)
+        self.chunk_size_val = manager.Value("i", 100)
 
-
-    def find_and_link_expt_data(self, expt_datas: dict[uuid.UUID,ExptData]) -> None:
+    def find_and_link_expt_data(self, expt_datas: dict[uuid.UUID, ExptData]) -> None:
         """Link the experimental data to this fit result."""
         if expt_datas is not None:
             if self.expt_data_id in expt_datas and self.expt_data_id is not None:
@@ -96,7 +90,7 @@ class MCMCSim:
         else:
             raise ValueError(f"Corresponding experimental data {self.expt_data_id} not found for FitResult.")
 
-    def find_and_link_model(self, models: dict[uuid.UUID,Model]) -> None:
+    def find_and_link_model(self, models: dict[uuid.UUID, Model]) -> None:
         """Link the experimental data to this fit result."""
         if models is not None:
             if self.model_id in models and self.model_id is not None:
@@ -105,9 +99,7 @@ class MCMCSim:
         else:
             raise ValueError(f"Corresponding model {self.model_id} not found for FitResult.")
 
-
-
-    def setup(self,obslist: list[bd.ObsType]) -> None:
+    def setup(self, obslist: list[bd.ObsType]) -> None:
         if self.bd_model is None:
             raise ValueError("bd_model must be set before running MCMC simulation.")
         if self._expt_data is None:
@@ -166,7 +158,7 @@ class MCMCSim:
             lower = params.get("lower", spec["lower"])
             upper = params.get("upper", spec["upper"])
             if prior_type != "uniform":
-                if prior_type not in ('none', ''):
+                if prior_type not in ("none", ""):
                     logger.warning(
                         "Unsupported prior type '%s' for '%s'; falling back to model bounds.",
                         prior_type,
@@ -190,43 +182,36 @@ class MCMCSim:
             self.bd_model.fcn_opts = {}
         self.bd_model.fcn_opts["mcmc_bounds"] = np.array(resolved_bounds, dtype=float)
 
-    async def run(self,chunk_size: Optional[int]=None) -> None:
+    async def run(self, chunk_size: Optional[int] = None) -> None:
         if chunk_size is not None:
             self.chunk_size_val.value = int(chunk_size)
         self.mc = await run.cpu_bound(partial(self._run_mcmc))
 
-    
     def _run_mcmc(self) -> bd.MCMC:
         """Run the MCMC simulation with multiprocessing in blocks of chunk_size steps."""
         if self.mc is None:
             raise ValueError("MCMC not set up. Call setup() before running the simulation.")
-        
+
         with Pool() as pool:
             while self.nsteps_done < self.nsteps_target:
                 if self.cancel_event.is_set():
-                    logger.info('MCMC run cancelled.')
+                    logger.info("MCMC run cancelled.")
                     return self.mc
                 chunk_size = self.chunk_size_val.value
                 samples = min(chunk_size, self.nsteps_target - self.nsteps_done)
                 b = io.StringIO()
-                self.mc.run(samples=samples,pool=pool,tqdm_kwargs={'file': b})
-
-
+                self.mc.run(samples=samples, pool=pool, tqdm_kwargs={"file": b})
 
                 self.nsteps_done += samples
                 self.q_percent_done.put(self.nsteps_done / self.nsteps_target)
                 self.q2_tqdm_out.put(b.getvalue().splitlines()[-1])
                 if self.mc.sampler is not None:
-                    a={}
+                    a = {}
                     # a['percent_done'] = self.nsteps_done / self.nsteps_target
                     # a['tqdm'] = b.getvalue().splitlines()[-1]
-                    a['chains'] = self.mc.sampler.get_chain()#discard=self.burn, thin=self.thin, flat=True)
-                    a['acceptance_fraction'] = self.mc.sampler.acceptance_fraction
+                    a["chains"] = self.mc.sampler.get_chain()  # discard=self.burn, thin=self.thin, flat=True)
+                    a["acceptance_fraction"] = self.mc.sampler.acceptance_fraction
                     self.q3_samples.put(a)
-                logger.info('Completed steps: %s', self.nsteps_done)
-            
-
-
-            
+                logger.info("Completed steps: %s", self.nsteps_done)
 
         return self.mc

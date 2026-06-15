@@ -15,6 +15,7 @@ Both functions produce self-contained notebooks that depend only on standard
 scientific Python libraries (numpy, pandas, matplotlib, lmfit) and
 ``bindtools``; they never import ``nicegui`` or anything from ``webgui``.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -37,6 +38,7 @@ from ..utils import safe_filename
 # ---------------------------------------------------------------------------
 # Low-level notebook construction helpers
 # ---------------------------------------------------------------------------
+
 
 def _md_cell(source: str) -> dict:
     return {"cell_type": "markdown", "metadata": {}, "source": source}
@@ -72,6 +74,7 @@ def _notebook(cells: list[dict]) -> dict:
 # Simulation notebook
 # ---------------------------------------------------------------------------
 
+
 def export_simulation_notebook(sim: "Simulation", model: "Model") -> dict:
     """Export a Simulation as an nbformat-4 notebook dict.
 
@@ -85,50 +88,48 @@ def export_simulation_notebook(sim: "Simulation", model: "Model") -> dict:
     # ------------------------------------------------------------------
     # Cell 0 — Title / metadata (markdown)
     # ------------------------------------------------------------------
-    md_title = "\n".join([
-        f"# Simulation: {sim.name or 'Unnamed'}",
-        "",
-        f"**Model:** {model.name}  ",
-        f"**Equation:** `{model.eq_str}`  ",
-        f"**Generated:** {timestamp}  ",
-        "",
-        "| Parameter | logK |",
-        "|-----------|------|",
-        *[
-            f"| log{bc.species} | {bc.logK if bc.logK is not None else 0.0} |"
-            for bc in model.binding_constants
-        ],
-    ])
+    md_title = "\n".join(
+        [
+            f"# Simulation: {sim.name or 'Unnamed'}",
+            "",
+            f"**Model:** {model.name}  ",
+            f"**Equation:** `{model.eq_str}`  ",
+            f"**Generated:** {timestamp}  ",
+            "",
+            "| Parameter | logK |",
+            "|-----------|------|",
+            *[f"| log{bc.species} | {bc.logK if bc.logK is not None else 0.0} |" for bc in model.binding_constants],
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 1 — Imports
     # ------------------------------------------------------------------
-    imports = (
-        "import numpy as np\n"
-        "import pandas as pd\n"
-        "import matplotlib.pyplot as plt\n"
-        "import bindtools.binding as bd"
-    )
+    imports = "import numpy as np\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport bindtools.binding as bd"
 
     # ------------------------------------------------------------------
     # Cell 2 — Model definition
     # ------------------------------------------------------------------
     eq_mat_list = model.eq_mat.tolist()
-    model_def = "\n".join([
-        "# Model definition",
-        f"eq_mat = np.array({eq_mat_list!r}, dtype=float)",
-        f"component_names = {model.component_names!r}",
-        f"species_names = {model.species!r}",
-    ])
+    model_def = "\n".join(
+        [
+            "# Model definition",
+            f"eq_mat = np.array({eq_mat_list!r}, dtype=float)",
+            f"component_names = {model.component_names!r}",
+            f"species_names = {model.species!r}",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 3 — Component concentrations (inlined from sim.comp_concs)
     # ------------------------------------------------------------------
     comp_dict = {col: sim.comp_concs[col].tolist() for col in sim.comp_concs.columns}
-    comp_concs_code = "\n".join([
-        "# Component concentrations",
-        f"comp_concs = pd.DataFrame({comp_dict!r})",
-    ])
+    comp_concs_code = "\n".join(
+        [
+            "# Component concentrations",
+            f"comp_concs = pd.DataFrame({comp_dict!r})",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 4 — Binding parameters
@@ -206,6 +207,7 @@ def export_simulation_notebook(sim: "Simulation", model: "Model") -> dict:
 # Fit notebook
 # ---------------------------------------------------------------------------
 
+
 def _build_lin_obs_cell4_lines(
     lin_obs_col_names: list,
     lin_obs_param_map: list,
@@ -244,10 +246,7 @@ def _build_analytical_lin_obs_lines(lin_obs_param_map: list) -> list[str]:
     fitfun_analytical_fast_exchange can call calc_analytical_linear_observables.
     """
     # Serialise as [[name_or_none, ...], ...]
-    name_map = [
-        [cell["name"] if cell is not None else None for cell in row]
-        for row in lin_obs_param_map
-    ]
+    name_map = [[cell["name"] if cell is not None else None for cell in row] for row in lin_obs_param_map]
     return [
         f"m.analytical_linear_obs_param_map = {name_map!r}",
     ]
@@ -281,11 +280,7 @@ def export_fit_notebook(
         integ_to_spec_list = None
 
     delta_to_spec = expt_data.delta_to_spec
-    has_delta = (
-        isinstance(delta_to_spec, np.ndarray)
-        and delta_to_spec.ndim == 2
-        and delta_to_spec.size > 0
-    )
+    has_delta = isinstance(delta_to_spec, np.ndarray) and delta_to_spec.ndim == 2 and delta_to_spec.size > 0
 
     obs_list = obs_type_names
     # ------------------------------------------------------------------
@@ -307,32 +302,30 @@ def export_fit_notebook(
     chisqr_str = f"{fit.chisqr:.4g}" if fit.chisqr is not None else "n/a"
     method_str = fit.fit_method or "least_squares"
 
-    md_title = "\n".join([
-        f"# Fit: {fit.name or 'Unnamed'}",
-        "",
-        f"**Model:** {model.name}  ",
-        f"**Equation:** `{model.eq_str}`  ",
-        f"**Generated:** {timestamp}  ",
-        "",
-        "## Original fit results",
-        "",
-        "| Metric | Value |",
-        "|--------|-------|",
-        f"| AIC | {aic_str} |",
-        f"| BIC | {bic_str} |",
-        f"| χ² | {chisqr_str} |",
-        f"| Method | {method_str} |",
-        f"| Success | {fit.success} |",
-        "",
-        "| Parameter | Value | Status |",
-        "|-----------|-------|--------|",
-        *param_rows,
-        *(
-            ["", f"**Termination:** {fit.termination_message}"]
-            if fit.termination_message
-            else []
-        ),
-    ])
+    md_title = "\n".join(
+        [
+            f"# Fit: {fit.name or 'Unnamed'}",
+            "",
+            f"**Model:** {model.name}  ",
+            f"**Equation:** `{model.eq_str}`  ",
+            f"**Generated:** {timestamp}  ",
+            "",
+            "## Original fit results",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
+            f"| AIC | {aic_str} |",
+            f"| BIC | {bic_str} |",
+            f"| χ² | {chisqr_str} |",
+            f"| Method | {method_str} |",
+            f"| Success | {fit.success} |",
+            "",
+            "| Parameter | Value | Status |",
+            "|-----------|-------|--------|",
+            *param_rows,
+            *(["", f"**Termination:** {fit.termination_message}"] if fit.termination_message else []),
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 1 — Imports
@@ -349,13 +342,15 @@ def export_fit_notebook(
     # ------------------------------------------------------------------
     # Cell 2 — Model definition
     # ------------------------------------------------------------------
-    model_def = "\n".join([
-        "# Model definition",
-        f"eq_mat = np.array({model.eq_mat.tolist()!r}, dtype=float)",
-        f"component_names = {model.component_names!r}",
-        f"species_names = {model.species!r}",
-        f"obs_list = {obs_list!r}",
-    ])
+    model_def = "\n".join(
+        [
+            "# Model definition",
+            f"eq_mat = np.array({model.eq_mat.tolist()!r}, dtype=float)",
+            f"component_names = {model.component_names!r}",
+            f"species_names = {model.species!r}",
+            f"obs_list = {obs_list!r}",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 3 — Load data
@@ -364,14 +359,16 @@ def export_fit_notebook(
     # Capture the column order used by the GUI (selected + reordered via column_mapping).
     # Embedding this lets the notebook reconstruct the same data slice from the raw CSV.
     sorted_cols = expt_data.sorted_data.columns.tolist()
-    load_data = "\n".join([
-        "# Load experimental data — keep the companion CSV alongside this notebook.",
-        "# The column list below reproduces the selection and ordering used in BindTools.",
-        f"data = pd.read_csv('{stem}_data.csv')",
-        f"data_cols = {sorted_cols!r}",
-        "data = data[data_cols]",
-        "raw = data.to_numpy(dtype=float)",
-    ])
+    load_data = "\n".join(
+        [
+            "# Load experimental data — keep the companion CSV alongside this notebook.",
+            "# The column list below reproduces the selection and ordering used in BindTools.",
+            f"data = pd.read_csv('{stem}_data.csv')",
+            f"data_cols = {sorted_cols!r}",
+            "data = data[data_cols]",
+            "raw = data.to_numpy(dtype=float)",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 4 — Construct binding model (mirrors reference notebook pattern)
@@ -420,29 +417,31 @@ def export_fit_notebook(
         else []
     )
 
-    construct_model = "\n".join([
-        "# Matrices mapping data columns → components and species → observables",
-        f"col_to_comp = np.array({col_to_comp_repr}, dtype=float)",
-        spec_to_integ_line,
-        spec_to_dd_line,
-        "",
-        "# Construct binding model",
-        "m = bd.bindingModel(",
-        "    eq_mat,",
-        "    component_names,",
-        "    species_names,",
-        f"    {spec_to_integ_arg},",
-        f"    {spec_to_dd_arg},",
-        "    col_to_comp,",
-        "    obs_list,",
-        "    raw,",
-        ")",
-        "# Compute component concentrations from the data matrix",
-        "m.compConcs = np.dot(m.rawData[:, :m.nComp], m.colToComp[:, :m.nComp].T)",
-        *lin_obs_lines,
-        *analytical_setup_lines,
-        "m.prepModel()",
-    ])
+    construct_model = "\n".join(
+        [
+            "# Matrices mapping data columns → components and species → observables",
+            f"col_to_comp = np.array({col_to_comp_repr}, dtype=float)",
+            spec_to_integ_line,
+            spec_to_dd_line,
+            "",
+            "# Construct binding model",
+            "m = bd.bindingModel(",
+            "    eq_mat,",
+            "    component_names,",
+            "    species_names,",
+            f"    {spec_to_integ_arg},",
+            f"    {spec_to_dd_arg},",
+            "    col_to_comp,",
+            "    obs_list,",
+            "    raw,",
+            ")",
+            "# Compute component concentrations from the data matrix",
+            "m.compConcs = np.dot(m.rawData[:, :m.nComp], m.colToComp[:, :m.nComp].T)",
+            *lin_obs_lines,
+            *analytical_setup_lines,
+            "m.prepModel()",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 5 — Set parameters (initial_value for re-running; fitted in comments)
@@ -479,12 +478,14 @@ def export_fit_notebook(
     # ------------------------------------------------------------------
     # Cell 6 — Run the fit
     # ------------------------------------------------------------------
-    run_fit = "\n".join([
-        "# Run the fit",
-        f"skip_col = {n_comp}  # number of component-concentration columns",
-        f"m.runModel(skip_col=skip_col, method={method_str!r})",
-        "display(HTML(m.miniResult._repr_html_()))",
-    ])
+    run_fit = "\n".join(
+        [
+            "# Run the fit",
+            f"skip_col = {n_comp}  # number of component-concentration columns",
+            f"m.runModel(skip_col=skip_col, method={method_str!r})",
+            "display(HTML(m.miniResult._repr_html_()))",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 7 — Plot residuals
@@ -507,41 +508,45 @@ def export_fit_notebook(
     # ------------------------------------------------------------------
     # Cell 8 — MCMC section (markdown header)
     # ------------------------------------------------------------------
-    md_mcmc = "\n".join([
-        "## MCMC sampling",
-        "",
-        "Use the cell below to explore the posterior distribution of the fit parameters with `emcee`.",
-        "Uncomment and adjust as needed.",
-    ])
+    md_mcmc = "\n".join(
+        [
+            "## MCMC sampling",
+            "",
+            "Use the cell below to explore the posterior distribution of the fit parameters with `emcee`.",
+            "Uncomment and adjust as needed.",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Cell 9 — MCMC code (commented out)
     # ------------------------------------------------------------------
-    mcmc_code = "\n".join([
-        "# # bd.MCMC requires the fit to have been run first (m.runModel above).",
-        "# # obs_types maps each observable column to its noise model.",
-        "# # Built-in names: 'NMRInteg', 'concMeas', 'deltaH', 'deltaF'.",
-        "# # Use a custom string for anything else.",
-        "# obs_types = [bd.ObsType(name) for name in obs_list]",
-        "#",
-        "# # Number of walkers and steps — increase for production runs.",
-        "# n_walkers = 50",
-        "# n_steps   = 2000",
-        "#",
-        "# mc = bd.MCMC(m, obs_types, walkers=n_walkers, samples=n_steps)",
-        "# mc.run()",
-        "#",
-        "# # Inspect autocorrelation time to check convergence",
-        "# mc.get_tau()",
-        "#",
-        "# # Walker trace plot",
-        "# mc.plot_chain()",
-        "# plt.show()",
-        "#",
-        "# # Corner plot (burn-in is estimated automatically from autocorr time)",
-        "# mc.plot_corner()",
-        "# plt.show()",
-    ])
+    mcmc_code = "\n".join(
+        [
+            "# # bd.MCMC requires the fit to have been run first (m.runModel above).",
+            "# # obs_types maps each observable column to its noise model.",
+            "# # Built-in names: 'NMRInteg', 'concMeas', 'deltaH', 'deltaF'.",
+            "# # Use a custom string for anything else.",
+            "# obs_types = [bd.ObsType(name) for name in obs_list]",
+            "#",
+            "# # Number of walkers and steps — increase for production runs.",
+            "# n_walkers = 50",
+            "# n_steps   = 2000",
+            "#",
+            "# mc = bd.MCMC(m, obs_types, walkers=n_walkers, samples=n_steps)",
+            "# mc.run()",
+            "#",
+            "# # Inspect autocorrelation time to check convergence",
+            "# mc.get_tau()",
+            "#",
+            "# # Walker trace plot",
+            "# mc.plot_chain()",
+            "# plt.show()",
+            "#",
+            "# # Corner plot (burn-in is estimated automatically from autocorr time)",
+            "# mc.plot_corner()",
+            "# plt.show()",
+        ]
+    )
 
     cells = [
         _md_cell(md_title),
@@ -563,6 +568,7 @@ def export_fit_notebook(
 # ---------------------------------------------------------------------------
 # MCMC notebook
 # ---------------------------------------------------------------------------
+
 
 def export_mcmc_notebook(
     mcmc: "MCMCSim | None",
@@ -601,7 +607,10 @@ def export_mcmc_notebook(
     # The fit notebook has exactly 10 cells; we discard the two commented-out
     # MCMC template cells at the end and replace them with live code.
     base_nb, csv_df = export_fit_notebook(
-        fit, model, expt_data, raw_data,
+        fit,
+        model,
+        expt_data,
+        raw_data,
         obs_type_names=obs_type_names,
         lin_obs_col_names=lin_obs_col_names,
         lin_obs_param_map=lin_obs_param_map,
@@ -609,10 +618,10 @@ def export_mcmc_notebook(
     cells = base_nb["cells"][:8]
 
     # MCMC parameters — use MCMCSim values when available, fall back to defaults
-    n_walkers = int(mcmc.nwalkers)       if mcmc is not None else 50
-    n_steps   = int(mcmc.nsteps_target) if mcmc is not None else 2000
-    thin      = int(mcmc.thin)          if mcmc is not None else 1
-    burn      = int(mcmc.burn)          if mcmc is not None else 200
+    n_walkers = int(mcmc.nwalkers) if mcmc is not None else 50
+    n_steps = int(mcmc.nsteps_target) if mcmc is not None else 2000
+    thin = int(mcmc.thin) if mcmc is not None else 1
+    burn = int(mcmc.burn) if mcmc is not None else 200
 
     stem = safe_filename(fit.name or "fit")
 
@@ -620,80 +629,88 @@ def export_mcmc_notebook(
     # Cell 8 — MCMC section header (markdown)
     # ------------------------------------------------------------------
     if include_chains:
-        md_mcmc = "\n".join([
-            "## MCMC sampling — loading saved chains",
-            "",
-            f"Chains are loaded from `{stem}_chains.hdf` (included in the zip).",
-            "Adjust `burnin` as needed.",
-        ])
+        md_mcmc = "\n".join(
+            [
+                "## MCMC sampling — loading saved chains",
+                "",
+                f"Chains are loaded from `{stem}_chains.hdf` (included in the zip).",
+                "Adjust `burnin` as needed.",
+            ]
+        )
     else:
-        md_mcmc = "\n".join([
-            "## MCMC sampling",
-            "",
-            "Run the cell below to explore the posterior distribution via MCMC.",
-            f"Walkers: {n_walkers}, steps: {n_steps}, thin: {thin}.",
-        ])
+        md_mcmc = "\n".join(
+            [
+                "## MCMC sampling",
+                "",
+                "Run the cell below to explore the posterior distribution via MCMC.",
+                f"Walkers: {n_walkers}, steps: {n_steps}, thin: {thin}.",
+            ]
+        )
 
     # ------------------------------------------------------------------
     # Cell 9 — MCMC code
     # ------------------------------------------------------------------
     if include_chains:
-        mcmc_code = "\n".join([
-            "import h5py",
-            "import corner as corner",
-            "",
-            f"with h5py.File('{stem}_chains.hdf', 'r') as f:",
-            "    chain    = f['mcmc/chain'][:]     # (nsteps, nwalkers, ndim)",
-            "    log_prob = f['mcmc/log_prob'][:]  # (nsteps, nwalkers)",
-            "",
-            "param_labels = [p for p in m.params if m.params[p].vary]",
-            "ndim = chain.shape[2]",
-            "",
-            "# Walker trace plot",
-            "n_rows = ndim + 1",
-            "fig, axes = plt.subplots(n_rows, 1, figsize=(12, 3 + n_rows * 1.7), sharex=True)",
-            "for i, label in enumerate(param_labels):",
-            "    axes[i].plot(chain[:, :, i], alpha=0.3, lw=0.5, color='k')",
-            "    axes[i].set_ylabel(label)",
-            "axes[-1].plot(log_prob, alpha=0.3, lw=0.5, color='k')",
-            "axes[-1].set_ylabel('log prob')",
-            "axes[-1].set_xlabel('step')",
-            "fig.tight_layout()",
-            "plt.show()",
-            "",
-            f"# Corner plot — burnin from original run ({burn}); adjust as needed",
-            f"burnin = {burn}",
-            "flat_chain = chain[burnin:].reshape(-1, ndim)",
-            "if len(param_labels) < ndim:",
-            "    param_labels += [f'sigma_{i}' for i in range(len(param_labels), ndim)]",
-            "corner.corner(flat_chain, labels=param_labels)",
-            "plt.show()",
-        ])
+        mcmc_code = "\n".join(
+            [
+                "import h5py",
+                "import corner as corner",
+                "",
+                f"with h5py.File('{stem}_chains.hdf', 'r') as f:",
+                "    chain    = f['mcmc/chain'][:]     # (nsteps, nwalkers, ndim)",
+                "    log_prob = f['mcmc/log_prob'][:]  # (nsteps, nwalkers)",
+                "",
+                "param_labels = [p for p in m.params if m.params[p].vary]",
+                "ndim = chain.shape[2]",
+                "",
+                "# Walker trace plot",
+                "n_rows = ndim + 1",
+                "fig, axes = plt.subplots(n_rows, 1, figsize=(12, 3 + n_rows * 1.7), sharex=True)",
+                "for i, label in enumerate(param_labels):",
+                "    axes[i].plot(chain[:, :, i], alpha=0.3, lw=0.5, color='k')",
+                "    axes[i].set_ylabel(label)",
+                "axes[-1].plot(log_prob, alpha=0.3, lw=0.5, color='k')",
+                "axes[-1].set_ylabel('log prob')",
+                "axes[-1].set_xlabel('step')",
+                "fig.tight_layout()",
+                "plt.show()",
+                "",
+                f"# Corner plot — burnin from original run ({burn}); adjust as needed",
+                f"burnin = {burn}",
+                "flat_chain = chain[burnin:].reshape(-1, ndim)",
+                "if len(param_labels) < ndim:",
+                "    param_labels += [f'sigma_{i}' for i in range(len(param_labels), ndim)]",
+                "corner.corner(flat_chain, labels=param_labels)",
+                "plt.show()",
+            ]
+        )
     else:
-        mcmc_code = "\n".join([
-            f"obs_type_names = {obs_type_names!r}",
-            "obs_types = [bd.ObsType(name) for name in obs_type_names]",
-            "",
-            f"n_walkers = {n_walkers}",
-            f"n_steps   = {n_steps}",
-            f"thin      = {thin}",
-            "",
-            "mc = bd.MCMC(m, obs_types, walkers=n_walkers, samples=n_steps)",
-            "mc.run(thin=thin)",
-            "",
-            "# Inspect autocorrelation time to check convergence",
-            "mc.get_tau()",
-            "",
-            "# Walker trace plot",
-            "mc.plot_chain()",
-            "plt.show()",
-            "",
-            "# Corner plot (burn-in estimated automatically from autocorr time)",
-            "mc.plot_corner()",
-            "plt.show()",
-            "",
-            f"# mc.save('{stem}_chains.hdf')  # uncomment to save chains",
-        ])
+        mcmc_code = "\n".join(
+            [
+                f"obs_type_names = {obs_type_names!r}",
+                "obs_types = [bd.ObsType(name) for name in obs_type_names]",
+                "",
+                f"n_walkers = {n_walkers}",
+                f"n_steps   = {n_steps}",
+                f"thin      = {thin}",
+                "",
+                "mc = bd.MCMC(m, obs_types, walkers=n_walkers, samples=n_steps)",
+                "mc.run(thin=thin)",
+                "",
+                "# Inspect autocorrelation time to check convergence",
+                "mc.get_tau()",
+                "",
+                "# Walker trace plot",
+                "mc.plot_chain()",
+                "plt.show()",
+                "",
+                "# Corner plot (burn-in estimated automatically from autocorr time)",
+                "mc.plot_corner()",
+                "plt.show()",
+                "",
+                f"# mc.save('{stem}_chains.hdf')  # uncomment to save chains",
+            ]
+        )
 
     cells.append(_md_cell(md_mcmc))
     cells.append(_code_cell(mcmc_code))
@@ -713,7 +730,7 @@ def export_mcmc_notebook(
         backend = mcmc.mc.sampler.backend
         with h5py.File("mcmc_export.h5", "w", driver="core", backing_store=False) as hf:
             g = hf.create_group("mcmc")
-            g.create_dataset("chain",    data=backend.chain)
+            g.create_dataset("chain", data=backend.chain)
             g.create_dataset("accepted", data=backend.accepted)
             g.create_dataset("log_prob", data=backend.log_prob)
             has_blobs = backend.blobs is not None

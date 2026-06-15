@@ -5,6 +5,7 @@ import pandas as pd
 from .Component import Component
 from .BindingConstant import BindingConstant
 
+
 @dataclass
 class Model:
     """Data class to represent a model."""
@@ -25,8 +26,7 @@ class Model:
     component_concs: pd.DataFrame = field(
         default_factory=pd.DataFrame, compare=False
     )  # compare=False means that __eq__ does not try to do a dataframe comparison, which tends to fail
-    id: uuid.UUID = field(
-        default_factory=lambda: (uuid.uuid4()))
+    id: uuid.UUID = field(default_factory=lambda: uuid.uuid4())
 
     def __post_init__(self):
         """Ensure data are appropriate types."""
@@ -45,23 +45,15 @@ class Model:
             ),  # Convert numpy arrays to lists
             "nComp": int(self.nComp),
             "nStep": int(self.nStep),
-            "components": (
-                [asdict(comp) for comp in self.components]
-                if len(self.components) > 0
-                else []
-            ),
+            "components": ([asdict(comp) for comp in self.components] if len(self.components) > 0 else []),
             "binding_constants": (
-                [asdict(k) for k in self.binding_constants]
-                if len(self.binding_constants) > 0
-                else []
+                [asdict(k) for k in self.binding_constants] if len(self.binding_constants) > 0 else []
             ),
-            "results": self.results.tolist() if hasattr(self,'results') and len(self.results)>0 else [],
+            "results": self.results.tolist() if hasattr(self, "results") and len(self.results) > 0 else [],
             "species": self.species if self.species else [],
             "component_names": self.component_names if self.component_names else [],
             "component_concs": (
-                self.component_concs.to_dict()
-                if isinstance(self.component_concs, pd.DataFrame)
-                else {}
+                self.component_concs.to_dict() if isinstance(self.component_concs, pd.DataFrame) else {}
             ),
             "id": str(self.id),
         }
@@ -69,14 +61,10 @@ class Model:
     @property
     def fullCompSpecList(self) -> list[str]:
         """Get the full list of component and species names."""
-        return [s + "_tot" for s in self.component_names] + [
-            s + "_free" for s in self.species
-        ]
-    
+        return [s + "_tot" for s in self.component_names] + [s + "_free" for s in self.species]
 
-    def __eq__(self,other):
+    def __eq__(self, other):
         if not isinstance(other, Model):
             return False
-        
-        return self.id == other.id
 
+        return self.id == other.id
