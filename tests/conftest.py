@@ -109,3 +109,10 @@ def _bindmc_server() -> None:
 #     return screen
 
 
+@pytest.fixture
+def screen(screen):
+    """Extend the NiceGUI Screen fixture to ignore transient unmounted element updates."""
+    screen.allowed_js_errors.append("Cannot read properties of undefined (reading 'update')")
+    return screen
+
+

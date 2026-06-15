@@ -19,6 +19,16 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
         pytest.skip('Download verification requires Chrome driver')
 
     screen.selenium.set_window_size(1920, 1080)
+    # Configure download path for headless Chrome using CDP
+    download_dir = os.path.join(os.getcwd(), 'tests', 'downloads')
+    os.makedirs(download_dir, exist_ok=True)
+    try:
+        screen.selenium.execute_cdp_cmd(
+            "Page.setDownloadBehavior",
+            {"behavior": "allow", "downloadPath": download_dir},
+        )
+    except Exception:
+        pass
     # Basic presence check (header label)
     screen.find('BindMC GUI')
 
@@ -27,12 +37,15 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     screen.find('Define model').click()
     screen.shot('simulation_model_setup',failed=False)
     # Enter equilibrium equations and parse (use marker for unique selection)
-
-    el = screen.selenium.find_element(By.CSS_SELECTOR, '[aria-label="Model Name"]')
-    el.send_keys(Keys.CONTROL, 'a')
-    el.send_keys(Keys.BACKSPACE)
-    el.click()
-    screen.type('Test Model')
+    screen.find("Add New Model").click()
+    name_input = WebDriverWait(screen.selenium, 10).until(
+        lambda d: next((el for el in d.find_elements(By.CSS_SELECTOR, 'input[placeholder="Enter model name"]') if el.is_displayed()), False)
+    )
+    name_input.click()
+    name_input.send_keys(Keys.CONTROL, 'a')
+    name_input.send_keys(Keys.BACKSPACE)
+    name_input.send_keys('Test Model')
+    screen.find("Create").click()
     screen.shot('simulation_model_setup_1',failed=False)
 
     #screen.type((Keys.CONTROL, 'a'))
@@ -58,6 +71,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
 
     # Go to Data Generation tab
     screen.find('Data Generation').click()
+    screen.wait(0.5)
     screen.should_contain('Data Generation Panel')
 
     # Set number of steps and component concentrations
@@ -106,8 +120,11 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     screen.find("Use auto-generated name").click()
     # Expect success notification
     screen.should_contain('completed successfully')
-
-    screen.should_contain('Simulation Results')
+ 
+    # Wait for Plotly to render the simulation results graph title
+    WebDriverWait(screen.selenium, 10).until(
+        lambda d: "Simulation Results" in d.page_source
+    )
     screen.should_contain('Test Model HG=4.0')
     screen.shot('simulation_results',failed=False)
     # Download the simulation data CSV

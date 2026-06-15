@@ -1581,9 +1581,9 @@ class StateManager:
                 if notify_user:
                     ui.notify("No models left. Default models have been created.", type="info")
             after = self._snapshot_object_ids()
-            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
             if reconcile:
                 self._finalize_active_context(reason="delete_model", emit_events=notify_listeners)
+            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
         else:
             ui.notify("Model not found.", type="negative")
 
@@ -1593,9 +1593,9 @@ class StateManager:
             before = self._snapshot_object_ids()
             self._delete_object_core(fit)
             after = self._snapshot_object_ids()
-            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
             if reconcile:
                 self._finalize_active_context(reason="delete_fit", emit_events=notify_listeners)
+            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
         else:
             ui.notify("Fit not found.", type="negative")
 
@@ -1605,9 +1605,9 @@ class StateManager:
             before = self._snapshot_object_ids()
             self._delete_object_core(simulation)
             after = self._snapshot_object_ids()
-            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
             if reconcile:
                 self._finalize_active_context(reason="delete_simulation", emit_events=notify_listeners)
+            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
         else:
             ui.notify("Simulation not found.", type="negative")
 
@@ -1617,9 +1617,9 @@ class StateManager:
             before = self._snapshot_object_ids()
             self._delete_object_core(expt_data)
             after = self._snapshot_object_ids()
-            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
             if reconcile:
                 self._finalize_active_context(reason="delete_expt_data", emit_events=notify_listeners)
+            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
         else:
             ui.notify("Experimental data not found.", type="negative")
 
@@ -1629,9 +1629,9 @@ class StateManager:
             before = self._snapshot_object_ids()
             self._delete_object_core(raw_data)
             after = self._snapshot_object_ids()
-            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
             if reconcile:
                 self._finalize_active_context(reason="delete_raw_data", emit_events=notify_listeners)
+            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
         else:
             ui.notify("Raw data not found.", type="negative")
 
@@ -1641,9 +1641,9 @@ class StateManager:
             before = self._snapshot_object_ids()
             self._delete_object_core(mcmc)
             after = self._snapshot_object_ids()
-            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
             if reconcile:
                 self._finalize_active_context(reason="delete_mcmc", emit_events=notify_listeners)
+            self._emit_collection_events(before, after, notify_listeners=notify_listeners)
         else:
             ui.notify("MCMC result not found.", type="negative")
     

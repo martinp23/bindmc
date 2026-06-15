@@ -499,7 +499,7 @@ class BayesPanel(BaseComponent):
         self.progress_label.set_text("")
         self.completed_steps = 0
 
-    def _rebuild_dark_species_card(self) -> None:
+    def _rebuild_dark_species_card(self, *args) -> None:
         """Rebuild dark-species toggle rows for the active dataset."""
         expt_data = self.sm.active_expt_data_or_none
         if expt_data is None or not expt_data.has_linear_obs(self.sm._expt_dtypes):
