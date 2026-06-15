@@ -2,7 +2,7 @@
 set -e
 
 echo "1. Cleaning old builds..."
-rm -rf dist/ .release_env/
+rm -rf dist/ .release_env/ bindtools/dist
 
 echo "2. Building production wheels..."
 uv build
