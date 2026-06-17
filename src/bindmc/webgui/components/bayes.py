@@ -245,7 +245,7 @@ class BayesPanel(BaseComponent):
             return
 
         if active_fit.bd_model is None:
-            print("No bindtools model selected for fitting, generating one.")
+            logger.info("No bindtools model selected for fitting, generating one.")
             ui.notify("Running an initial fit using least_sq")
             m1 = self.sm.generate_binding_model_for_fit(active_fit)
             m1 = await run.cpu_bound(
@@ -262,6 +262,7 @@ class BayesPanel(BaseComponent):
         nwalkers = int(self.nwalkers_input.value)
         obslist = self.sm.active_expt_data.get_obs_list(self.sm._expt_dtypes)
 
+        logger.info("Setting up for MCMC run")
         # Create MCMC simulation (not yet registered in state)
         self.mcmc = MCMCSim(
             model=self.sm.active_model,
@@ -281,12 +282,13 @@ class BayesPanel(BaseComponent):
                 type="info",
                 timeout=60000,
             )
+            logger.info("Running a trial run")
             try:
                 trial_elapsed = await run.cpu_bound(partial(_run_mcmc_trial, self.mcmc.mc, _TRIAL_STEPS))
                 it_s = _TRIAL_STEPS / trial_elapsed
                 full_seconds = nsteps_target * trial_elapsed / _TRIAL_STEPS
                 full_time_str = _format_duration(full_seconds)
-
+                logger.info("Trial run finished; took {trial_elapsed:.1f} s ({it_s:.2f} it/s).")
                 with ui.dialog() as timing_dialog, ui.card().classes("w-[min(560px,92vw)]"):
                     ui.label("Runtime estimate").classes("text-lg font-bold")
                     ui.label(f"{_TRIAL_STEPS:,} steps took {trial_elapsed:.1f} s ({it_s:.2f} it/s).").classes(
@@ -296,6 +298,8 @@ class BayesPanel(BaseComponent):
                         f"The full run ({nsteps_target:,} steps, {nwalkers} walkers) "
                         f"will take approximately {full_time_str}."
                     ).classes("mt-2")
+                    logger.info(f"The full run ({nsteps_target:,} steps, {nwalkers} walkers) "
+                        f"will take approximately {full_time_str}.")
                     ui.label("Do you want to continue?").classes("mt-1 font-medium")
                     with ui.row().classes("w-full justify-end gap-2 mt-3"):
                         ui.button("Cancel", on_click=lambda: timing_dialog.submit(False))
@@ -320,6 +324,7 @@ class BayesPanel(BaseComponent):
         self.run_button.set_enabled(False)
         self.stop_button.set_enabled(True)
         self.progress_bar.value = 0
+        logger.info("Starting MCMC analysis")
         self.progress_label.text = "Starting MCMC analysis..."
         self._log_status("Starting MCMC analysis...")
         self._start_run_timers()
