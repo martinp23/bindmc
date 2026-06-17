@@ -3,6 +3,7 @@
 import tempfile
 from types import SimpleNamespace
 
+import os
 import h5py
 import numpy as np
 import pandas as pd
@@ -290,9 +291,10 @@ def test_mcmc_notebook_exported_hdf_bytes_reopen_cleanly():
 
     assert h5_bytes is not None
 
-    with tempfile.NamedTemporaryFile(suffix=".hdf") as tmp:
+    tmp = tempfile.NamedTemporaryFile(suffix=".hdf", delete=False)
+    try:
         tmp.write(h5_bytes)
-        tmp.flush()
+        tmp.close()
 
         with h5py.File(tmp.name, "r") as handle:
             group = handle["mcmc"]
@@ -301,6 +303,11 @@ def test_mcmc_notebook_exported_hdf_bytes_reopen_cleanly():
             np.testing.assert_array_equal(group["log_prob"][:], backend.log_prob)
             assert group.attrs["iteration"] == backend.iteration
             assert bool(group.attrs["has_blobs"]) is False
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------
