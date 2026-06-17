@@ -224,6 +224,31 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     file_input.send_keys(str(csv_path))
     screen.should_contain("loaded successfully")
 
+
+    def assign_indep_conc(var_name: str):
+
+        indep_label = WebDriverWait(screen.selenium, 10).until(
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    f"//div[text()='{var_name}']/ancestor::div[contains(@class,'q-card')][1]//div[contains(@class,'q-radio__label') and normalize-space()='Independent variable']",
+                )        )
+        )
+        dtype_input = WebDriverWait(screen.selenium, 10).until(
+            EC.presence_of_element_located(
+                (By.XPATH, f"//div[text()='{var_name}']/ancestor::div[contains(@class,'q-card')][1]//input[@aria-label='Data type']")
+            )
+        )
+        screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", dtype_input)
+        dtype_input.click()
+        WebDriverWait(screen.selenium, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[contains(@class,'q-item')]//span[normalize-space()='Conc.']"))
+        ).click()
+
+
+    assign_indep_conc("H_tot")
+    assign_indep_conc("G_tot")
+
     # Mark dH as dependent + delta-h dtype (nmr_ppm).
     dep_label = WebDriverWait(screen.selenium, 10).until(
         EC.presence_of_element_located(
@@ -233,8 +258,11 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
             )
         )
     )
+
     screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", dep_label)
     screen.selenium.execute_script("arguments[0].click();", dep_label)
+
+
 
     dtype_input = WebDriverWait(screen.selenium, 10).until(
         EC.presence_of_element_located(
