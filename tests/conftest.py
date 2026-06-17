@@ -40,6 +40,8 @@ def chrome_options():
         # More stable in CI/headless.
         opts.add_argument("--window-size=1920,1080")
         opts.add_argument("--disable-gpu")
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--disable-dev-shm-usage")
 
         # Configure default download directory so `Download Simulation Data`
         # can be verified in `tests/test_simulation_workflow_screen.py`.

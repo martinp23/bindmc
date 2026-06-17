@@ -12,6 +12,7 @@ jobs:
   test:
     name: Test on ${{ matrix.os }} / Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
     
     strategy:
       fail-fast: false
@@ -36,3 +37,12 @@ jobs:
 
       - name: Sync dependencies and run tests
         run: uv run pytest
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: screenshots/
+          if-no-files-found: ignore
+
