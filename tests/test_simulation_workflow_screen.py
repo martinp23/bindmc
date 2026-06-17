@@ -134,6 +134,10 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     screen.type("20")  # end conc value
 
     click_button("Generate Component Concentrations")
+    
+    # Wait for the backend to generate the concentrations and update the UI
+    # We look for "0.005" since Component 1 is set to 5 mM constant.
+    WebDriverWait(screen.selenium, 10).until(lambda d: "0.005" in d.page_source)
 
     # Switch to Simulation tab and run
     click_tab("Simulation")
