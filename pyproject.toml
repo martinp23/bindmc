@@ -28,7 +28,7 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     "arviz==0.21.0",
-    "bindtools>=0.1.2",
+    "bindtools>=0.1.3",
     "corner==2.2.3",
     "emcee==3.1.6",
     "h5py>=3.14.0",
