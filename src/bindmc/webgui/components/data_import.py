@@ -126,6 +126,7 @@ class DataImportPanel(BaseComponent):
                 rd = active_raw
                 new_expt_data = ExptData(name=rd.filename, init_raw_data=rd, init_model=self.sm.active_model)
                 self.sm.add_expt_data(new_expt_data)
+            self.sm.notify_listeners("data_imported")  # Trigger table and graph update
         else:
             ui.notify("No raw data selected to prepare data model from.", type="negative")
 

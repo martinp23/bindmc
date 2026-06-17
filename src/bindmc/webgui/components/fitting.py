@@ -108,7 +108,7 @@ def _infer_analytical_fast_exchange_config(model, expt_data, expt_dtypes: dict) 
             has_nmr = True
         elif meas in ("uvvis", "fluorescence"):
             has_linear = True
-        else:
+        else: 
             return None  # Unknown or unsupported observable type for analytical path
 
     if has_nmr and has_linear:
@@ -442,6 +442,9 @@ class FittingPanel(BaseComponent):
             self.sm.active_expt_data,
             self.sm._expt_dtypes,
         )
+
+
+
         self.m1 = self.sm.generate_binding_model_for_fit(analytical_cfg=analytical_cfg)
         if analytical_cfg is not None:
             ui.notify(
@@ -492,7 +495,7 @@ class FittingPanel(BaseComponent):
                 init_model=self.sm.active_model,
                 bd_model=self.m1,
                 analytical_fast_exchange=analytical_cfg is not None,
-                analytical_topology=(str(analytical_cfg["topology"]) if analytical_cfg is not None else None),
+                analytical_topology=self.m1.analytical_topology,
                 analytical_obs_columns=(
                     [str(x) for x in cast(list[str], analytical_cfg["obs_columns"])]
                     if analytical_cfg is not None
@@ -503,11 +506,7 @@ class FittingPanel(BaseComponent):
                     if analytical_cfg is not None
                     else []
                 ),
-                analytical_complex_indices=(
-                    [int(x) for x in cast(list[int], analytical_cfg["complex_indices"])]
-                    if analytical_cfg is not None
-                    else []
-                ),
+                analytical_complex_indices=self.m1.analytical_complex_indices,
             )
             self.sm.add_fit(new_fit)
 

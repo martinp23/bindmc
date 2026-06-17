@@ -65,6 +65,10 @@ class DataModelPanel(BaseComponent):
 
         nmr_fast_ex = False
         nmr_slow_ex = False
+        
+        # make all visible to allow changes in the next code block before we hide them again if not needed
+        self.dataModel_specInteg_block.visible = True
+        self.dataModel_specFastExchange_block.visible = True
 
         # work out what we need
         if self.sm.active_expt_data_or_none is not None:
@@ -76,7 +80,7 @@ class DataModelPanel(BaseComponent):
                     if getattr(dtype, "meas", None) == "nmr_ppm" and f.get("depindep") == "dep":
                         nmr_fast_ex = True
                         self._gen_spec_fast_exchange_block()
-                    elif getattr(dtype, "meas", None) == "nmr_conc" and f.get("depindep") == "dep":
+                    elif getattr(dtype, "meas", None) == "nmr_integ" and f.get("depindep") == "dep":
                         nmr_slow_ex = True
                         self._gen_spec_integ_block()
 
@@ -142,7 +146,7 @@ class DataModelPanel(BaseComponent):
                     self.spec_integ_inps[spec] = ui.input().classes("flex-1").props("clearable")
 
                     self.spec_integ_inps[spec].on("blur", lambda c=self.spec_integ_inps[spec]: self.set_focus(c))
-                    b = ui.checkbox("Enabled", value=True)
+                    b = ui.checkbox("Enabled", value=True).props(f"testid=spec-enabled-{spec}")
                     self.spec_integ_inps[spec].bind_enabled_from(b, "value")
                     if (
                         hasattr(active_expt, "integ_to_spec")
