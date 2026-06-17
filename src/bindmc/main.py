@@ -107,7 +107,7 @@ storage_path.mkdir(parents=True, exist_ok=True)
 # Redirect native window persistence data away from default paths
 app.native.start_args["storage_path"] = str(storage_path)
 
-if __name__ == "__main__":
+if __name__ in {"__main__", "__mp_main__"}:
     ui.run(title="BindMC", reload=reload, native=native_mode, port=native.find_open_port(), storage_secret="bindmc_secret")
 
 
