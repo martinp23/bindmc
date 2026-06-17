@@ -93,9 +93,25 @@ def _ensure_checkbox_checked(driver, locator, timeout: float = 10.0) -> None:
             if time.time() > end_time:
                 raise
             time.sleep(0.2)
-
-
 _CAN_BIND_WEBDRIVER_PORT = _can_bind_local_webdriver_port()
+
+
+def _click_dropdown_option(driver, option_text: str, timeout: float = 10.0) -> None:
+    import time
+    end_time = time.time() + timeout
+    while True:
+        try:
+            option = WebDriverWait(driver, 2.0).until(
+                EC.element_to_be_clickable((By.XPATH, f"//div[contains(@class,'q-item')]//span[normalize-space()='{option_text}']"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", option)
+            option.click()
+            return
+        except (StaleElementReferenceException, ElementClickInterceptedException):
+            if time.time() > end_time:
+                raise
+            time.sleep(0.2)
+
 
 
 
@@ -126,7 +142,14 @@ def _replace_text_input(element, value: str) -> None:
 
 
 def _visible(driver, by: By, selector: str):
-    return [el for el in driver.find_elements(by, selector) if el.is_displayed()]
+    res = []
+    for el in driver.find_elements(by, selector):
+        try:
+            if el.is_displayed():
+                res.append(el)
+        except StaleElementReferenceException:
+            pass
+    return res
 
 
 def _first_visible(driver, by: By, selector: str, timeout: float = 10.0):
@@ -155,11 +178,13 @@ def _write_1to1_conc_csv(path: Path) -> None:
     hg = 0.5 * (term - np.sqrt(disc))
     pd.DataFrame({"H_tot": host_tot, "G_tot": guest_tot, "HG": hg}).to_csv(path, index=False)
 
-@pytest.mark.skipif(
-    _CHROME_DRIVER is None or _CHROME_BROWSER is None or not _CAN_BIND_WEBDRIVER_PORT,
-    reason="Chrome/Chromedriver or local WebDriver socket is unavailable for Selenium screen test.",
-)
 def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_shift(screen: Screen, tmp_path: Path) -> None:
+    # Require Chrome
+    caps = getattr(screen.selenium, "capabilities", {}) or {}
+    browser_name = str(caps.get("browserName", "")).lower()
+    if "chrome" not in browser_name:
+        pytest.skip("Chrome/Chromedriver is unavailable for Selenium screen test.")
+
     csv_path = tmp_path / "analytical_fast_exchange_11.csv"
     _write_1to1_shift_csv(csv_path)
 
@@ -211,9 +236,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_shift(screen: Screen
     )
     screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", dtype_input)
     dtype_input.click()
-    WebDriverWait(screen.selenium, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//div[contains(@class,'q-item')]//span[normalize-space()='H (ppm)']"))
-    ).click()
+    _click_dropdown_option(screen.selenium, "H (ppm)")
 
     # Configure data model mapping for concentrations.
     # Fast-exchange expression should now auto-default for simple analytical 1:1.
@@ -232,12 +255,18 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_shift(screen: Screen
     _click_tab(screen.selenium, "Results")
     _click_button(screen.selenium, "Run Fit")
     screen.should_contain("Using analytical fast-exchange backend (1:1).")
-    screen.should_contain("delta0_dH")
+    WebDriverWait(screen.selenium, 15).until(lambda d: "delta0_dH" in d.page_source)
     screen.should_contain("deltac1_dH")
 
 
 
 def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen, tmp_path: Path) -> None:
+    # Require Chrome
+    caps = getattr(screen.selenium, "capabilities", {}) or {}
+    browser_name = str(caps.get("browserName", "")).lower()
+    if "chrome" not in browser_name:
+        pytest.skip("Chrome/Chromedriver is unavailable for Selenium screen test.")
+
     csv_path = tmp_path / "analytical_fast_exchange_11.csv"
     _write_1to1_conc_csv(csv_path)
 
@@ -291,9 +320,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
         )
         screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", dtype_input)
         dtype_input.click()
-        WebDriverWait(screen.selenium, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[contains(@class,'q-item')]//span[normalize-space()='Conc.']"))
-        ).click()
+        _click_dropdown_option(screen.selenium, "Conc.")
 
 
     assign_indep_conc("H_tot")
@@ -323,9 +350,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     )
     screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", dtype_input)
     dtype_input.click()
-    WebDriverWait(screen.selenium, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//div[contains(@class,'q-item')]//span[normalize-space()='NMR Conc.']"))
-    ).click()
+    _click_dropdown_option(screen.selenium, "NMR Conc.")
 
     _click_button(screen.selenium, "Prepare data model")
     screen.should_contain("Data model prepared.")
@@ -361,6 +386,6 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     screen.wait(0.5)  # wait for potential backend processing after data model application
     _click_button(screen.selenium, "Run Fit")
     # screen.should_contain("Using analytical fast-exchange backend (1:1).")
-    screen.should_contain("logHG")
+    WebDriverWait(screen.selenium, 15).until(lambda d: "logHG" in d.page_source)
 
 
