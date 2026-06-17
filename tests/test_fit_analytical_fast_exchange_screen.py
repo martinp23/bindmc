@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.common.keys import Keys  # type: ignore
 from selenium.webdriver.support import expected_conditions as EC  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
-from .testutils import CTRL_KEY
+from .testutils import CTRL_KEY, open_screen
 
 _CHROME_DRIVER = shutil.which("chromedriver")
 _CHROME_BROWSER = (
@@ -164,7 +164,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_shift(screen: Screen
     csv_path = tmp_path / "analytical_fast_exchange_11.csv"
     _write_1to1_shift_csv(csv_path)
 
-    screen.open("/")
+    open_screen(screen, "/")
     screen.selenium.set_window_size(1920, 1080)
     screen.find("BindMC GUI")
     screen.wait(1.0)  # Wait for full load
@@ -242,7 +242,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     csv_path = tmp_path / "analytical_fast_exchange_11.csv"
     _write_1to1_conc_csv(csv_path)
 
-    screen.open("/")
+    open_screen(screen, "/")
     screen.selenium.set_window_size(1920, 1080)
     screen.find("BindMC GUI")
     screen.wait(1.0)  # Wait for full load

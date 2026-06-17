@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
 from selenium.webdriver.support import expected_conditions as EC  # type: ignore
 import pandas as pd
-from .testutils import CTRL_KEY
+
 
 def test_simulation_workflow_screen(screen: Screen) -> None:
     # Open root
@@ -69,9 +69,10 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
             False,
         )
     )
-    name_input.click()
-    name_input.send_keys(CTRL_KEY, "a")
-    name_input.send_keys(Keys.BACKSPACE)
+    screen.selenium.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'}); arguments[0].focus(); arguments[0].value = ''; arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+        name_input,
+    )
     name_input.send_keys("Test Model")
     click_button("Create")
     screen.shot("simulation_model_setup_1", failed=False)
@@ -101,10 +102,11 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
 
     # Set number of steps and component concentrations
     el = screen.selenium.find_element(By.CSS_SELECTOR, '[aria-label="Number of steps"]')
-    el.send_keys(CTRL_KEY, "a")
-    el.send_keys(Keys.BACKSPACE)
-    el.click()
-    screen.type("40")
+    screen.selenium.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'}); arguments[0].focus(); arguments[0].value = ''; arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+        el,
+    )
+    el.send_keys("40")
 
     screen.should_contain_input("H")
 
