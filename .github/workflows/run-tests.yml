@@ -1,8 +1,6 @@
 name: Cross-Platform Test Suite
 
 on:
-  push:
-    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
   # Enables the manual run button in the GitHub UI
