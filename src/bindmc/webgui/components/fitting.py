@@ -535,7 +535,7 @@ class FittingPanel(BaseComponent):
 
     def _update_fit_graphs(self, e=None) -> None:
         """Update the fit results display."""
-        print("Updating fit results...")
+        logger.info("Updating fit results...")
         self.fit_graph.clear_graph(update=False)
         if len(self.sm.fits) > 0:
             self.speciation_graph.clear_graph(update=False)
