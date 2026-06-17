@@ -119,11 +119,12 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     )
     screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", simulation_tab)
     simulation_tab.click()
+    screen.wait(0.5)
 
     screen.find("Run Simulation").click()
     screen.find("Use auto-generated name").click()
     # Expect success notification
-    screen.should_contain("completed successfully")
+    WebDriverWait(screen.selenium, 15).until(lambda d: "completed successfully" in d.page_source)
 
     # Wait for Plotly to render the simulation results graph title
     WebDriverWait(screen.selenium, 10).until(lambda d: "Simulation Results" in d.page_source)
