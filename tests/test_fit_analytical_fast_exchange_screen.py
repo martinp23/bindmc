@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import pandas as pd
 from nicegui.testing import Screen
-from selenium.common.exceptions import ElementClickInterceptedException  # type: ignore
+from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException  # type: ignore
 from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.common.keys import Keys  # type: ignore
 from selenium.webdriver.support import expected_conditions as EC  # type: ignore
@@ -41,23 +41,58 @@ def _can_bind_local_webdriver_port() -> bool:
     return False
 
 
-def _click_tab(driver, label: str) -> None:
-    tab = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, f"//div[contains(@class, 'q-tab__label') and text()='{label}']"))
-    )
-    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tab)
-    tab.click()
+def _click_tab(driver, label: str, timeout: float = 10.0) -> None:
     import time
+    end_time = time.time() + timeout
+    while True:
+        try:
+            tab = WebDriverWait(driver, 2.0).until(
+                EC.element_to_be_clickable((By.XPATH, f"//div[contains(@class, 'q-tab__label') and text()='{label}']"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tab)
+            tab.click()
+            time.sleep(0.5)
+            return
+        except StaleElementReferenceException:
+            if time.time() > end_time:
+                raise
+            time.sleep(0.2)
 
-    time.sleep(0.5)
+
+def _click_button(driver, text: str, timeout: float = 10.0) -> None:
+    import time
+    end_time = time.time() + timeout
+    while True:
+        try:
+            btn = WebDriverWait(driver, 2.0).until(
+                EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{text}')]"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
+            btn.click()
+            return
+        except StaleElementReferenceException:
+            if time.time() > end_time:
+                raise
+            time.sleep(0.2)
 
 
-def _click_button(driver, text: str) -> None:
-    btn = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{text}')]"))
-    )
-    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
-    btn.click()
+def _ensure_checkbox_checked(driver, locator, timeout: float = 10.0) -> None:
+    import time
+    end_time = time.time() + timeout
+    while True:
+        try:
+            checkbox = WebDriverWait(driver, 2.0).until(
+                EC.element_to_be_clickable(locator)
+            )
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", checkbox)
+            native_input = checkbox.find_element(By.CSS_SELECTOR, "input")
+            if not native_input.is_selected():
+                checkbox.click()
+            return
+        except StaleElementReferenceException:
+            if time.time() > end_time:
+                raise
+            time.sleep(0.2)
 
 
 _CAN_BIND_WEBDRIVER_PORT = _can_bind_local_webdriver_port()
@@ -313,11 +348,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     _replace_text_input(g_map_input, "[G_tot]")
 
 
-    hg_check = WebDriverWait(screen.selenium, 10).until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, '[testid="spec-enabled-HG"]'))
-    )
-    screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", hg_check)
-    hg_check.click()  # enable HG spec if not already (should be enabled by default for this test, but just in case)
+    _ensure_checkbox_checked(screen.selenium, (By.CSS_SELECTOR, '[testid="spec-enabled-HG"]'))
     HG_free_input = _first_visible(
         screen.selenium, By.XPATH, "//div[normalize-space()='Species conc. [HG]_free:']/following::input[@type='text'][1]"
     )
