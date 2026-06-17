@@ -16,12 +16,20 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python Debugger: UV Main",
             "type": "debugpy",
             "request": "launch",
             "python": "${workspaceFolder}/.venv/bin/python", // Points directly to the UV environment
             "program": "src/bindmc/main.py"
+        },
+        {
+            "name": "Python Debugger: UV Windows",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/.venv/Scripts/python", // Points directly to the UV environment
+            "program": "src/bindmc/__main__.py"
         }
     ]
 }
