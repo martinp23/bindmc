@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
 from selenium.webdriver.support import expected_conditions as EC  # type: ignore
 import pandas as pd
+import sys
 
 def test_simulation_workflow_screen(screen: Screen) -> None:
     # Open root
@@ -31,6 +32,9 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
         pass
     # Basic presence check (header label)
     screen.find("BindMC GUI")
+
+    # Use Command key on macOS, Control on other platforms for input select-all actions
+    ctrl_key = Keys.COMMAND if sys.platform == "darwin" else Keys.CONTROL
 
     # Wait for the page/Vue components to fully load 
     screen.wait(1.0)
@@ -69,7 +73,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
         )
     )
     name_input.click()
-    name_input.send_keys(Keys.CONTROL, "a")
+    name_input.send_keys(ctrl_key, "a")
     name_input.send_keys(Keys.BACKSPACE)
     name_input.send_keys("Test Model")
     click_button("Create")
@@ -100,7 +104,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
 
     # Set number of steps and component concentrations
     el = screen.selenium.find_element(By.CSS_SELECTOR, '[aria-label="Number of steps"]')
-    el.send_keys(Keys.CONTROL, "a")
+    el.send_keys(ctrl_key, "a")
     el.send_keys(Keys.BACKSPACE)
     el.click()
     screen.type("40")
