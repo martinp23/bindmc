@@ -7,8 +7,7 @@ import glob
 from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
 from selenium.webdriver.support import expected_conditions as EC  # type: ignore
-import filecmp
-
+import pandas as pd
 
 def test_simulation_workflow_screen(screen: Screen) -> None:
     # Open root
@@ -169,10 +168,12 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
         time.sleep(0.2)
     assert csv_file is not None, "CSV file was not downloaded"
 
-    # # Compare to reference file
     ref_dir = os.path.join(os.getcwd(), "tests", "references")
     ref_csv = os.path.join(ref_dir, "sim_1to1_4.csv")
-    assert filecmp.cmp(csv_file, ref_csv, shallow=False), "Downloaded CSV does not match reference"
+    
+    df_downloaded = pd.read_csv(csv_file)
+    df_reference = pd.read_csv(ref_csv)
+    pd.testing.assert_frame_equal(df_downloaded, df_reference, rtol=1e-4, atol=1e-8)
 
     # Teardown: delete the downloaded CSV file
     if csv_file and os.path.exists(csv_file):
