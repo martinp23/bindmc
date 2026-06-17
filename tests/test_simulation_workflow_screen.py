@@ -6,6 +6,7 @@ import os
 import glob
 from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
+from selenium.webdriver.support import expected_conditions as EC  # type: ignore
 import filecmp
 
 
@@ -32,12 +33,32 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     # Basic presence check (header label)
     screen.find("BindMC GUI")
 
+    # Wait for the page/Vue components to fully load 
+    screen.wait(1.0)
+
+    # Helper function to click tabs robustly
+    def click_tab(label: str) -> None:
+        tab = WebDriverWait(screen.selenium, 10).until(
+            EC.element_to_be_clickable((By.XPATH, f"//div[contains(@class, 'q-tab__label') and text()='{label}']"))
+        )
+        screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", tab)
+        tab.click()
+        screen.wait(0.5)
+
+    # Helper function to click buttons robustly
+    def click_button(text: str) -> None:
+        btn = WebDriverWait(screen.selenium, 10).until(
+            EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{text}')]"))
+        )
+        screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
+        btn.click()
+
     # Navigate to Model Setup
-    screen.find("Simulate").click()
-    screen.find("Define model").click()
+    click_tab("Simulate")
+    click_tab("Define model")
     screen.shot("simulation_model_setup", failed=False)
     # Enter equilibrium equations and parse (use marker for unique selection)
-    screen.find("Add New Model").click()
+    click_button("Add New Model")
     name_input = WebDriverWait(screen.selenium, 10).until(
         lambda d: next(
             (
@@ -52,7 +73,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     name_input.send_keys(Keys.CONTROL, "a")
     name_input.send_keys(Keys.BACKSPACE)
     name_input.send_keys("Test Model")
-    screen.find("Create").click()
+    click_button("Create")
     screen.shot("simulation_model_setup_1", failed=False)
 
     # screen.type((Keys.CONTROL, 'a'))
@@ -60,7 +81,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     el = screen.selenium.find_element(By.CSS_SELECTOR, '[aria-label="Equilibrium Equations"]')
     el.click()
     screen.type("H + G <=> HG")
-    screen.find("Parse Equations").click()
+    click_button("Parse Equations")
 
     try:
         screen.should_contain("H + G ⇋ HG" or "G + H ⇋ HG")
@@ -75,8 +96,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     screen.type("4")
 
     # Go to Data Generation tab
-    screen.find("Data Generation").click()
-    screen.wait(0.5)
+    click_tab("Data Generation")
     screen.should_contain("Data Generation Panel")
 
     # Set number of steps and component concentrations
@@ -111,18 +131,13 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     screen.type(Keys.TAB)  # end conc
     screen.type("20")  # end conc value
 
-    screen.find("Generate Component Concentrations").click()
+    click_button("Generate Component Concentrations")
 
     # Switch to Simulation tab and run
-    simulation_tab = screen.selenium.find_element(
-        By.XPATH, "//div[contains(@class, 'q-tab__label') and text()='Simulation']"
-    )
-    screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", simulation_tab)
-    simulation_tab.click()
-    screen.wait(0.5)
+    click_tab("Simulation")
 
-    screen.find("Run Simulation").click()
-    screen.find("Use auto-generated name").click()
+    click_button("Run Simulation")
+    click_button("Use auto-generated name")
     # Expect success notification
     WebDriverWait(screen.selenium, 15).until(lambda d: "completed successfully" in d.page_source)
 
@@ -131,7 +146,7 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     screen.should_contain("Test Model HG=4.0")
     screen.shot("simulation_results", failed=False)
     # Download the simulation data CSV
-    screen.find("Download Simulation Data").click()
+    click_button("Download Simulation Data")
 
     # Wait for the download and get the file path
 
@@ -162,3 +177,4 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
     # Teardown: delete the downloaded CSV file
     if csv_file and os.path.exists(csv_file):
         os.remove(csv_file)
+

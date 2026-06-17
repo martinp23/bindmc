@@ -52,7 +52,16 @@ def _click_tab(driver, label: str) -> None:
     time.sleep(0.5)
 
 
+def _click_button(driver, text: str) -> None:
+    btn = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{text}')]"))
+    )
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
+    btn.click()
+
+
 _CAN_BIND_WEBDRIVER_PORT = _can_bind_local_webdriver_port()
+
 
 
 def _replace_text_input(element, value: str) -> None:
@@ -123,25 +132,26 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_shift(screen: Screen
     screen.open("/")
     screen.selenium.set_window_size(1920, 1080)
     screen.find("BindMC GUI")
+    screen.wait(1.0)  # Wait for full load
 
     # Build 1:1 model on the Fit side.
     _click_tab(screen.selenium, "Fit")
     _click_tab(screen.selenium, "Define model")
 
-    screen.find("Add New Model").click()
+    _click_button(screen.selenium, "Add New Model")
     name_input = _first_visible(screen.selenium, By.CSS_SELECTOR, 'input[placeholder="Enter model name"]')
     _replace_text_input(name_input, "Test model 1:1")
-    screen.find("Create").click()
+    _click_button(screen.selenium, "Create")
     eq_input = _first_visible(screen.selenium, By.CSS_SELECTOR, 'textarea[aria-label="Equilibrium Equations"]')
     _replace_text_input(eq_input, "H + G <=> HG")
-    screen.find("Parse Equations").click()
+    _click_button(screen.selenium, "Parse Equations")
     screen.wait(0.1)
     logk_input = _first_visible(screen.selenium, By.CSS_SELECTOR, 'input[placeholder="Enter binding constant"]')
     _replace_text_input(logk_input, "5")
 
     # Import CSV with a host-tracked chemical-shift observable.
     _click_tab(screen.selenium, "Import data")
-    screen.find("Upload File").click()
+    _click_button(screen.selenium, "Upload File")
     file_input = WebDriverWait(screen.selenium, 10).until(
         lambda d: (lambda items: items[-1] if items else False)(d.find_elements(By.CSS_SELECTOR, 'input[type="file"]'))
     )
@@ -182,14 +192,15 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_shift(screen: Screen
         screen.selenium, By.XPATH, "//div[normalize-space()='Component [G]_tot:']/following::input[@type='text'][1]"
     )
     _replace_text_input(g_map_input, "[G_tot]")
-    screen.find("Apply Data Model").click()
+    _click_button(screen.selenium, "Apply Data Model")
 
     # Run fit and verify analytical parameter names (UI evidence for analytical backend path).
     _click_tab(screen.selenium, "Results")
-    screen.find("Run Fit").click()
+    _click_button(screen.selenium, "Run Fit")
     screen.should_contain("Using analytical fast-exchange backend (1:1).")
     screen.should_contain("delta0_dH")
     screen.should_contain("deltac1_dH")
+
 
 
 def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen, tmp_path: Path) -> None:
@@ -199,25 +210,26 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     screen.open("/")
     screen.selenium.set_window_size(1920, 1080)
     screen.find("BindMC GUI")
+    screen.wait(1.0)  # Wait for full load
 
     # Build 1:1 model on the Fit side.
     _click_tab(screen.selenium, "Fit")
     _click_tab(screen.selenium, "Define model")
 
-    screen.find("Add New Model").click()
+    _click_button(screen.selenium, "Add New Model")
     name_input = _first_visible(screen.selenium, By.CSS_SELECTOR, 'input[placeholder="Enter model name"]')
     _replace_text_input(name_input, "Test model 1:1")
-    screen.find("Create").click()
+    _click_button(screen.selenium, "Create")
     eq_input = _first_visible(screen.selenium, By.CSS_SELECTOR, 'textarea[aria-label="Equilibrium Equations"]')
     _replace_text_input(eq_input, "H + G <=> HG")
-    screen.find("Parse Equations").click()
+    _click_button(screen.selenium, "Parse Equations")
     screen.wait(0.1)
     logk_input = _first_visible(screen.selenium, By.CSS_SELECTOR, 'input[placeholder="Enter binding constant"]')
     _replace_text_input(logk_input, "5")
 
     # Import CSV with a host-tracked chemical-shift observable.
     _click_tab(screen.selenium, "Import data")
-    screen.find("Upload File").click()
+    _click_button(screen.selenium, "Upload File")
     file_input = WebDriverWait(screen.selenium, 10).until(
         lambda d: (lambda items: items[-1] if items else False)(d.find_elements(By.CSS_SELECTOR, 'input[type="file"]'))
     )
@@ -281,7 +293,7 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
         EC.element_to_be_clickable((By.XPATH, "//div[contains(@class,'q-item')]//span[normalize-space()='NMR Conc.']"))
     ).click()
 
-    screen.find("Prepare data model").click()
+    _click_button(screen.selenium, "Prepare data model")
     screen.should_contain("Data model prepared.")
 
 
@@ -301,7 +313,10 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     _replace_text_input(g_map_input, "[G_tot]")
 
 
-    hg_check = screen.selenium.find_element(By.CSS_SELECTOR, '[testid="spec-enabled-HG"]')
+    hg_check = WebDriverWait(screen.selenium, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, '[testid="spec-enabled-HG"]'))
+    )
+    screen.selenium.execute_script("arguments[0].scrollIntoView({block: 'center'});", hg_check)
     hg_check.click()  # enable HG spec if not already (should be enabled by default for this test, but just in case)
     HG_free_input = _first_visible(
         screen.selenium, By.XPATH, "//div[normalize-space()='Species conc. [HG]_free:']/following::input[@type='text'][1]"
@@ -309,12 +324,13 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     _replace_text_input(HG_free_input, "[HG]")
 
 
-    screen.find("Apply Data Model").click()
+    _click_button(screen.selenium, "Apply Data Model")
     screen.selenium.save_screenshot(str("screenshots/after_mapping.png"))
     # Run fit and verify analytical parameter names (UI evidence for analytical backend path).
     _click_tab(screen.selenium, "Results")
     screen.wait(0.5)  # wait for potential backend processing after data model application
-    screen.find("Run Fit").click()
+    _click_button(screen.selenium, "Run Fit")
     # screen.should_contain("Using analytical fast-exchange backend (1:1).")
     screen.should_contain("logHG")
+
 
