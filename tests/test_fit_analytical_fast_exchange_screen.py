@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.common.keys import Keys  # type: ignore
 from selenium.webdriver.support import expected_conditions as EC  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
-from .testutils import CTRL_KEY, open_screen
+from .testutils import open_screen
 
 _CHROME_DRIVER = shutil.which("chromedriver")
 _CHROME_BROWSER = (
@@ -107,8 +107,7 @@ def _replace_text_input(element, value: str) -> None:
     )
     try:
         element.click()
-        element.send_keys(CTRL_KEY, "a")
-        element.send_keys(Keys.BACKSPACE)
+        element.send_keys(Keys.BACKSPACE * 50)
         element.send_keys(value)
     except ElementClickInterceptedException:
         # Fallback for transient overlays/tooltips intercepting pointer events.

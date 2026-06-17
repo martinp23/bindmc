@@ -69,10 +69,8 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
             False,
         )
     )
-    screen.selenium.execute_script(
-        "arguments[0].scrollIntoView({block: 'center'}); arguments[0].focus(); arguments[0].value = ''; arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
-        name_input,
-    )
+    name_input.click()
+    name_input.send_keys(Keys.BACKSPACE * 50)
     name_input.send_keys("Test Model")
     click_button("Create")
     screen.shot("simulation_model_setup_1", failed=False)
@@ -102,10 +100,8 @@ def test_simulation_workflow_screen(screen: Screen) -> None:
 
     # Set number of steps and component concentrations
     el = screen.selenium.find_element(By.CSS_SELECTOR, '[aria-label="Number of steps"]')
-    screen.selenium.execute_script(
-        "arguments[0].scrollIntoView({block: 'center'}); arguments[0].focus(); arguments[0].value = ''; arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
-        el,
-    )
+    el.click()
+    el.send_keys(Keys.BACKSPACE * 10)
     el.send_keys("40")
 
     screen.should_contain_input("H")

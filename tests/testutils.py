@@ -1,9 +1,6 @@
 from nicegui import ui
 import asyncio
-from selenium.webdriver.common.keys import Keys
 import sys
-
-CTRL_KEY = Keys.COMMAND if sys.platform == "darwin" else Keys.CONTROL
 
 
 
