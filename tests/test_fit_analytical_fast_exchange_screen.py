@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By  # type: ignore
 from selenium.webdriver.common.keys import Keys  # type: ignore
 from selenium.webdriver.support import expected_conditions as EC  # type: ignore
 from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
-import sys
+from .testutils import CTRL_KEY
 
 _CHROME_DRIVER = shutil.which("chromedriver")
 _CHROME_BROWSER = (
@@ -106,10 +106,8 @@ def _replace_text_input(element, value: str) -> None:
         element,
     )
     try:
-        
-        ctrl_key = Keys.COMMAND if sys.platform == "darwin" else Keys.CONTROL
         element.click()
-        element.send_keys(ctrl_key, "a")
+        element.send_keys(CTRL_KEY, "a")
         element.send_keys(Keys.BACKSPACE)
         element.send_keys(value)
     except ElementClickInterceptedException:

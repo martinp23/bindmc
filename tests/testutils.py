@@ -1,5 +1,10 @@
 from nicegui import ui
 import asyncio
+from selenium.webdriver.common.keys import Keys
+import sys
+
+CTRL_KEY = Keys.COMMAND if sys.platform == "darwin" else Keys.CONTROL
+
 
 
 # This function sets a numeric value in the NiceGUI UI and ensures the value change is processed correctly - especially important for elements that
