@@ -1691,7 +1691,10 @@ bd.makeFitResidPlot(fit,plotMask=(0,1),ylabel='Chemical shift (ppm)')"""
         # return model_str
 
     def generate_binding_model_for_fit(
-        self, fit: Optional[FitResult] = None, analytical_cfg: Optional[dict[str, object]] = None
+        self,
+        fit: Optional[FitResult] = None,
+        analytical_cfg: Optional[dict[str, object]] = None,
+        force_numerical: bool = False,
     ) -> bd.bindingModel:
         """Generate a bindtools.bindingModel from the current active model."""
         old_fit = None
@@ -1777,17 +1780,7 @@ bd.makeFitResidPlot(fit,plotMask=(0,1),ylabel='Chemical shift (ppm)')"""
                 model.analytical_linear_obs_columns = lin_cols
                 model.analytical_linear_obs_param_map = linear_obs_param_map
 
-        # Always infer topology to allow analytical concentrations in slow exchange
-        from bindmc.webgui.utils import _infer_simple_fast_exchange_topology
-        topology_res = _infer_simple_fast_exchange_topology(
-            self.active_model.eq_mat, len(self.active_model.component_names)
-        )
-        if topology_res is not None:
-            topo_name, complex_indices = topology_res
-            model.analytical_topology = topo_name
-            model.analytical_complex_indices = complex_indices
-
-        model.prepModel()
+        model.prepModel(force_numerical=force_numerical)
 
         for k in self.active_model.binding_constants:
             model.params[f"log{k.species}"].set(
