@@ -18,6 +18,11 @@ from nicegui import native, ui, app
 from bindmc.webgui.app import BindMCServer
 import logging
 import nicegui
+import nicegui.binding
+
+# Suppress NiceGUI's data binding warning (which confuses users with chemical binding)
+nicegui.binding.MAX_PROPAGATION_TIME = float("inf")
+
 from packaging.version import InvalidVersion, Version
 from pathlib import Path
 from platformdirs import user_data_dir
