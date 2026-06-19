@@ -108,7 +108,7 @@ storage_path.mkdir(parents=True, exist_ok=True)
 app.native.start_args["storage_path"] = str(storage_path)
 
 def main() -> None:
-    ui.run(title="BindMC", reload=reload, native=native_mode, port=native.find_open_port(), storage_secret="bindmc_secret")
+    ui.run(title="BindMC", reload=reload, native=native_mode, port=native.find_open_port(), storage_secret="bindmc_secret", reconnect_timeout=300)
 
 if __name__ in {"__main__", "__mp_main__"}:
     main()

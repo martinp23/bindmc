@@ -414,7 +414,7 @@ class BayesPanel(BaseComponent):
         
         Analysis completed at {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")}
         """
-        self._make_result_graphs()
+        ui.timer(0, self._make_result_graphs, once=True)
 
     def _update_graphs(self):
         if hasattr(self, "mcmc"):
@@ -548,7 +548,7 @@ class BayesPanel(BaseComponent):
             self.mcmc = found_mcmc
             self._update_results(self.mcmc)
 
-    def _make_result_graphs(self):
+    async def _make_result_graphs(self):
         if self.mcmc.mc.sampler is None:
             ui.notify("No chain available; re-run MCMC", type="negative")
             return
@@ -556,21 +556,26 @@ class BayesPanel(BaseComponent):
         self._apply_chain_container_style(self.result_chains, ndim)
         self._apply_corner_container_style(ndim)
 
-        f = self.result_chains.figure
-        f.clear()
+        def _plot_chain_sync(fig, mc, w, h):
+            fig.clear()
+            self._set_figure_size(fig, w, h)
+            mc.plot_chain(fig=fig)
+            fig.tight_layout()
+
         w, h = self._chain_figsize(ndim)
-        self._set_figure_size(f, w, h)
-        self.mcmc.mc.plot_chain(fig=f)
-        f.tight_layout()
+        await run.io_bound(_plot_chain_sync, self.result_chains.figure, self.mcmc.mc, w, h)
         self.result_chains.update()
 
-        f = self.result_corner.figure
-        f.clear()
-        cw, ch = self._corner_figsize(ndim)
-        self._set_figure_size(f, cw, ch)
         burnin = self._get_burnin(notify=True)
-        self.mcmc.mc.make_corner_fig(burnin=burnin, fig=f)
-        f.tight_layout()
+
+        def _plot_corner_sync(fig, mc, burnin, cw, ch):
+            fig.clear()
+            self._set_figure_size(fig, cw, ch)
+            mc.make_corner_fig(burnin=burnin, fig=fig)
+            fig.tight_layout()
+
+        cw, ch = self._corner_figsize(ndim)
+        await run.io_bound(_plot_corner_sync, self.result_corner.figure, self.mcmc.mc, burnin, cw, ch)
         self.result_corner.update()
 
     async def _download_figure(self, fig, filename: str) -> None:
@@ -583,13 +588,19 @@ class BayesPanel(BaseComponent):
         if not hasattr(self, "mcmc") or self.mcmc.mc is None or self.mcmc.mc.sampler is None:
             ui.notify("No chain figure available for download.", type="warning")
             return
+        ui.notify("Generating chain figure for download...", type="info")
         ndim = int(self.mcmc.mc.sampler.ndim)
         fig = plt.figure()
         w, h = self._chain_figsize(ndim)
         fig.set_dpi(_EXPORT_DPI)
         fig.set_size_inches(w * 1.2, h * 1.2, forward=True)
-        self.mcmc.mc.plot_chain(fig=fig)
-        fig.tight_layout()
+
+        def _plot(f, mc):
+            mc.plot_chain(fig=f)
+            f.tight_layout()
+
+        await run.io_bound(_plot, fig, self.mcmc.mc)
+
         active_fit = self.sm.active_fit_or_none
         stem = active_fit.name if active_fit is not None else "mcmc"
         filename = f"{safe_filename(stem, fallback='mcmc')}_chains.png"
@@ -600,14 +611,20 @@ class BayesPanel(BaseComponent):
         if not hasattr(self, "mcmc") or self.mcmc.mc is None or self.mcmc.mc.sampler is None:
             ui.notify("No corner figure available for download.", type="warning")
             return
+        ui.notify("Generating corner figure for download...", type="info")
         ndim = int(self.mcmc.mc.sampler.ndim)
         fig = plt.figure()
         w, h = self._corner_figsize(ndim)
         fig.set_dpi(_EXPORT_DPI)
         fig.set_size_inches(w * 1.2, h * 1.2, forward=True)
         burnin = self._get_burnin(notify=False)
-        self.mcmc.mc.make_corner_fig(burnin=burnin, fig=fig)
-        fig.tight_layout()
+
+        def _plot(f, mc, burnin):
+            mc.make_corner_fig(burnin=burnin, fig=f)
+            f.tight_layout()
+
+        await run.io_bound(_plot, fig, self.mcmc.mc, burnin)
+
         active_fit = self.sm.active_fit_or_none
         stem = active_fit.name if active_fit is not None else "mcmc"
         filename = f"{safe_filename(stem, fallback='mcmc')}_corner.png"
