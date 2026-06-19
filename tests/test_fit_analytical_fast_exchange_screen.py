@@ -386,6 +386,6 @@ def test_fit_uses_analytical_fast_exchange_backend_in_ui_11_conc(screen: Screen,
     screen.wait(0.5)  # wait for potential backend processing after data model application
     _click_button(screen.selenium, "Run Fit")
     # screen.should_contain("Using analytical fast-exchange backend (1:1).")
-    WebDriverWait(screen.selenium, 15).until(lambda d: "logHG" in d.page_source)
+    WebDriverWait(screen.selenium, 15).until(lambda d: "logK(HG)" in d.page_source)
 
 

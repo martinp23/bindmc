@@ -1,14 +1,11 @@
 {
   "python.defaultInterpreterPath": "/home/mpeeks/miniforge3/envs/binding_gui/bin/python",
-
   "python.linting.enabled": true,
   "python.linting.ruffEnabled": true,
   "python.linting.ruffPath": "ruff",
   "python.linting.lintOnSave": true,
-
   "python.formatting.provider": "black",
   "python.formatting.blackPath": "black",
-
   "[python]": {
     "editor.formatOnSave": false,
     // "editor.codeActionsOnSave": {
@@ -16,23 +13,25 @@
     //    "source.fixAll.ruff": "explicit"
     //  }
   },
-
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true,
-    "python.languageServer": "Pylance",
-    "python.analysis.diagnosticSeverityOverrides": {
-      "reportMissingModuleSource": "none",
-      "reportShadowedImports": "none"
-    },
-
-    "python.sortImports.args": ["--profile", "black"],
-    "python.sortImports.path": "isort",
-    "isort.check": true,
-    "python.analysis.diagnosticMode": "workspace",
-    "python.analysis.typeCheckingMode": "standard",
-    "python-envs.defaultEnvManager": "ms-python.python:venv",
-    "python-envs.defaultPackageManager": "ms-python.python:pip"
+  "python.testing.pytestArgs": [
+    "tests",
+    "bindtools/tests",
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.languageServer": "Pylance",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingModuleSource": "none",
+    "reportShadowedImports": "none"
+  },
+  "python.sortImports.args": [
+    "--profile",
+    "black"
+  ],
+  "python.sortImports.path": "isort",
+  "isort.check": true,
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.typeCheckingMode": "standard",
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.defaultPackageManager": "ms-python.python:pip"
 }

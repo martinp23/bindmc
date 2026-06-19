@@ -243,3 +243,34 @@ def test_delete_default_model_is_blocked():
     sm.delete_model(default_model, notify_user=False, notify_listeners=False)
     assert default_model_id in sm.models
     assert len(sm.models) == n_before
+
+
+def test_mcmcsim_max_retained_points_serialization():
+    sm = _new_state_manager()
+    model = _new_model(sm, "model-mcmc")
+    _, expt = _add_raw_and_expt(sm, model, "mcmc-expt")
+
+    # Create MCMCSim with custom max_retained_points
+    mcmc = _new_mcmc(model, expt)
+    mcmc.max_retained_points = 2500
+    sm.add_mcmc(mcmc)
+
+    # Serialize
+    data = sm.to_dict()
+
+    # Verify max_retained_points is written
+    mcmc_entries = data.get("mcmcs", [])
+    assert len(mcmc_entries) == 1
+    assert mcmc_entries[0]["max_retained_points"] == 2500
+
+    # Deserialize back
+    sm2 = _new_state_manager()
+    sm2.from_json(json.dumps(data))
+    assert sm2.mcmcs[mcmc.id].max_retained_points == 2500
+
+    # Verify compatibility: delete max_retained_points from json, verify it falls back to 1000
+    del data["mcmcs"][0]["max_retained_points"]
+    sm3 = _new_state_manager()
+    sm3.from_json(json.dumps(data))
+    assert sm3.mcmcs[mcmc.id].max_retained_points == 1000
+

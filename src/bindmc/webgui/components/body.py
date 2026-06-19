@@ -194,6 +194,8 @@ class Body(BaseComponent):
         if e.args == "Data model setup":
             # Ensure the data model is updated when switching to the Data model setup tab
             self.components["data_model"]._populate_blocks()
+        if e.args == "MCMC":
+            self.components["mcmc"].update_default_walkers()
         if e.args == "Fit Results":
             pass
             # Ensure the fit results graph is updated when switching to the Fit Results tab

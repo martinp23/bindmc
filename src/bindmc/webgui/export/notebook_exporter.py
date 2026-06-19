@@ -659,6 +659,7 @@ def export_mcmc_notebook(
                 f"with h5py.File('{stem}_chains.hdf', 'r') as f:",
                 "    chain    = f['mcmc/chain'][:]     # (nsteps, nwalkers, ndim)",
                 "    log_prob = f['mcmc/log_prob'][:]  # (nsteps, nwalkers)",
+                "    thin     = f['mcmc'].attrs.get('thin', 1)",
                 "",
                 "param_labels = [p for p in m.params if m.params[p].vary]",
                 "ndim = chain.shape[2]",
@@ -671,7 +672,10 @@ def export_mcmc_notebook(
                 "    axes[i].set_ylabel(label)",
                 "axes[-1].plot(log_prob, alpha=0.3, lw=0.5, color='k')",
                 "axes[-1].set_ylabel('log prob')",
-                "axes[-1].set_xlabel('step')",
+                "if thin != 1:",
+                "    axes[-1].set_xlabel(f'step (thinning 1-in-{thin} points)')",
+                "else:",
+                "    axes[-1].set_xlabel('step')",
                 "fig.tight_layout()",
                 "plt.show()",
                 "",
@@ -738,6 +742,7 @@ def export_mcmc_notebook(
             if has_blobs:
                 g.create_dataset("blobs", data=backend.blobs)
             g.attrs["iteration"] = backend.iteration
+            g.attrs["thin"] = thin
             hf.flush()
             h5_bytes = bytes(hf.id.get_file_image())
 

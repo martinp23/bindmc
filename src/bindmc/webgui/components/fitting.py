@@ -80,6 +80,12 @@ def _prepare_fit_plot_frames(fit: FitResult) -> tuple[pd.DataFrame, pd.DataFrame
 
 
 def _infer_analytical_fast_exchange_config(model, expt_data, expt_dtypes: dict) -> dict[str, object] | None:
+    import warnings
+    warnings.warn(
+        "_infer_analytical_fast_exchange_config is deprecated. Topology detection has been relocated to bindtools.bindingModel.prepModel().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if model is None or expt_data is None:
         return None
 
@@ -229,8 +235,8 @@ class FittingPanel(BaseComponent):
 
         with self.container:
             ui.label("Fitting panel").classes("text-lg font-bold mb-4")
-            with ui.row():
-                with ui.card():
+            with ui.row().classes("w-full gap-4 items-start flex-col lg:flex-row"):
+                with ui.card().classes("w-full lg:w-80 shrink-0"):
                     ui.label("Fitting options to go here.")
                     self.fit_alg_select = ui.select(
                         ["least_squares", "l-bfgs", "ampgo"],
@@ -437,16 +443,8 @@ class FittingPanel(BaseComponent):
                     type="info",
                 )
 
-        analytical_cfg = _infer_analytical_fast_exchange_config(
-            self.sm.active_model,
-            self.sm.active_expt_data,
-            self.sm._expt_dtypes,
-        )
-
-
-
-        self.m1 = self.sm.generate_binding_model_for_fit(analytical_cfg=analytical_cfg)
-        if analytical_cfg is not None:
+        self.m1 = self.sm.generate_binding_model_for_fit()
+        if self.m1.analytical_fast_exchange:
             ui.notify(
                 f"Using analytical fast-exchange backend ({self.m1.analytical_topology}).",
                 type="info",
@@ -494,18 +492,10 @@ class FittingPanel(BaseComponent):
                 init_expt_data=self.sm.active_expt_data,
                 init_model=self.sm.active_model,
                 bd_model=self.m1,
-                analytical_fast_exchange=analytical_cfg is not None,
+                analytical_fast_exchange=self.m1.analytical_fast_exchange,
                 analytical_topology=self.m1.analytical_topology,
-                analytical_obs_columns=(
-                    [str(x) for x in cast(list[str], analytical_cfg["obs_columns"])]
-                    if analytical_cfg is not None
-                    else []
-                ),
-                analytical_obs_components=(
-                    [int(x) for x in cast(list[int], analytical_cfg["obs_components"])]
-                    if analytical_cfg is not None
-                    else []
-                ),
+                analytical_obs_columns=[str(x) for x in self.m1.analytical_obs_columns],
+                analytical_obs_components=[int(x) for x in self.m1.analytical_obs_components],
                 analytical_complex_indices=self.m1.analytical_complex_indices,
             )
             self.sm.add_fit(new_fit)
@@ -718,7 +708,7 @@ class FittingPanel(BaseComponent):
 class FitResultsCard(BaseComponent):
     def setup_nicegui(self) -> None:
 
-        with ui.card():
+        with ui.card().classes("w-full lg:flex-1 min-w-0 overflow-hidden"):
             # ui.label("Fitting Results to go here.")
             with ui.row().classes("w-full"):
                 ui.label("Results:")
@@ -785,7 +775,14 @@ class FitResultsCard(BaseComponent):
 
         fitParams = list(dict.fromkeys(fitParams))  # Remove duplicates
 
-        paramCols = [{"name": param, "label": param, "field": param} for param in fitParams]
+        paramCols = [
+            {
+                "name": param,
+                "label": f"logK({param[3:]})" if param.startswith("log") else param,
+                "field": param,
+            }
+            for param in fitParams
+        ]
 
         stat_col_names = {"chisqr", "aic", "bic", "message", "covariance"}
         stat_cols = [c for c in self.default_columns if c["name"] in stat_col_names]

@@ -122,6 +122,10 @@ class BayesPanel(BaseComponent):
                             "Export to Notebook",
                             on_click=self._open_export_dialog,
                         ).classes("mt-2")
+                        self.advanced_settings_button = ui.button(
+                            "Advanced Settings",
+                            on_click=self._open_advanced_settings_dialog,
+                        ).classes("mt-2")
 
             # Control buttons
             with ui.row().classes("mt-4"):
@@ -162,6 +166,7 @@ class BayesPanel(BaseComponent):
         self.is_running = False
         self.should_stop = False
         self.completed_steps = 0
+        self.mcmc_max_points = 1000
         self.progress_timer = None
         self.status_timer = None
         self.graph_timer = None
@@ -205,8 +210,8 @@ class BayesPanel(BaseComponent):
             tau = e.tau
             if notify:
                 s = (
-                    f"Autocorrelation time is likely too short. Max tau is {int(np.max(tau))}; "
-                    f"nsteps is {self.completed_steps}. Re-run for at least {int(50 * np.max(tau))} steps."
+                    f"Autocorrelation time is likely too short. Max tau is {int(np.max(tau))* self.mcmc.thin}; "
+                    f"nsteps is {self.completed_steps} (before thinning). Re-run for at least {int(50 * np.max(tau) * self.mcmc.thin)} steps."
                 )
                 ui.notify(s, type="warning")
                 self.result_area.content += f"""
@@ -244,6 +249,16 @@ class BayesPanel(BaseComponent):
             ui.notify("No active fit result.", type="warning")
             return
 
+        ndim = self.get_ndim()
+        min_walkers = 2 * ndim
+        nwalkers = int(self.nwalkers_input.value)
+        if nwalkers < min_walkers:
+            ui.notify(
+                f"You need at least {min_walkers} parameters.",
+                type="warning",
+            )
+            return
+
         if active_fit.bd_model is None:
             logger.info("No bindtools model selected for fitting, generating one.")
             ui.notify("Running an initial fit using least_sq")
@@ -262,6 +277,9 @@ class BayesPanel(BaseComponent):
         nwalkers = int(self.nwalkers_input.value)
         obslist = self.sm.active_expt_data.get_obs_list(self.sm._expt_dtypes)
 
+        # Calculate thinning factor dynamically based on max points limit
+        thin = max(1, nsteps_target // self.mcmc_max_points)
+
         logger.info("Setting up for MCMC run")
         # Create MCMC simulation (not yet registered in state)
         self.mcmc = MCMCSim(
@@ -270,6 +288,8 @@ class BayesPanel(BaseComponent):
             bd_model=active_fit.bd_model,
             nwalkers=nwalkers,
             nsteps_target=nsteps_target,
+            thin=thin,
+            max_retained_points=self.mcmc_max_points,
             priors=list(self.prior_editor.priors) if self.prior_editor.priors else [],
         )
         self.mcmc.setup(obslist)
@@ -351,9 +371,11 @@ class BayesPanel(BaseComponent):
                 self.progress_label.text = f"MCMC Complete! ({total_steps} steps with {nwalkers} walkers)"
                 self._log_status("MCMC analysis completed successfully")
                 ui.notify("MCMC analysis completed successfully!", type="positive")
-
+                self._log_status("Generating result figures... this may take a while...")
                 # Update results
                 self._update_results(self.mcmc)
+                self._log_status("Figure generation complete!")
+
 
         except Exception as e:
             self.progress_label.text = "Analysis failed"
@@ -414,7 +436,7 @@ class BayesPanel(BaseComponent):
         
         Analysis completed at {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")}
         """
-        self._make_result_graphs()
+        ui.timer(0, self._make_result_graphs, once=True)
 
     def _update_graphs(self):
         if hasattr(self, "mcmc"):
@@ -441,7 +463,10 @@ class BayesPanel(BaseComponent):
                     for w in walkers_to_plot:
                         axs[d].plot(chains[:, w, d], label=f"Dim {d} Walker {w}")
                         axs[d].set_title(f"Parameter {d}")
-                        axs[d].set_xlabel("Steps")
+                        if self.mcmc.thin != 1:
+                            axs[d].set_xlabel(f"Steps (thinning 1-in-{self.mcmc.thin} points)")
+                        else:
+                            axs[d].set_xlabel(f"Steps")
 
                 # Plot acceptance fraction
                 axs[-1].bar(range(nwalkers), acceptance_frac)
@@ -547,8 +572,63 @@ class BayesPanel(BaseComponent):
         ):
             self.mcmc = found_mcmc
             self._update_results(self.mcmc)
+            self.nwalkers_input.set_value(found_mcmc.nwalkers)
+            self.nsteps_input.set_value(found_mcmc.nsteps_target)
+            self.mcmc_max_points = getattr(found_mcmc, "max_retained_points", 1000)
+            ndim = self.get_ndim()
+            self.nwalkers_input.min = max(2, 2 * ndim)
+        else:
+            self.mcmc_max_points = 1000
+            self.update_default_walkers()
 
-    def _make_result_graphs(self):
+    def get_ndim(self) -> int:
+        active_fit = self.sm.active_fit_or_none
+        if active_fit is None:
+            return 0
+
+        varying_params = 0
+        if getattr(active_fit, "params", None):
+            varying_params = sum(1 for p in active_fit.params.values() if isinstance(p, dict) and p.get("vary") is True)
+        elif active_fit.bd_model is not None:
+            if active_fit.bd_model.miniResult is not None:
+                varying_params = sum(1 for p in active_fit.bd_model.miniResult.params.values() if p.vary)
+            elif active_fit.bd_model.params is not None:
+                varying_params = sum(1 for p in active_fit.bd_model.params.values() if p.vary)
+
+        unique_dtypes = set()
+        expt_data = self.sm.active_expt_data_or_none
+        if expt_data is not None:
+            for col, details in expt_data.col_details.items():
+                if details.get("depindep") == "dep":
+                    dtype_key = details.get("dtype")
+                    if dtype_key is not None:
+                        edt = self.sm._expt_dtypes.get(dtype_key)
+                        if edt is not None:
+                            unique_dtypes.add(edt.meas)
+
+        return varying_params + len(unique_dtypes)
+
+    def update_default_walkers(self) -> None:
+        active_fit = self.sm.active_fit_or_none
+        if active_fit is None:
+            return
+
+        ndim = self.get_ndim()
+        default_walkers = 2 * ndim
+        self.nwalkers_input.min = max(2, default_walkers)
+
+        found_mcmc = self._fit_to_mcmc.get(active_fit.id)
+        if (
+            found_mcmc is not None
+            and getattr(found_mcmc, "mc", None) is not None
+            and getattr(found_mcmc.mc, "sampler", None) is not None
+        ):
+            self.nwalkers_input.set_value(found_mcmc.nwalkers)
+        else:
+            self.nwalkers_input.set_value(default_walkers)
+
+
+    async def _make_result_graphs(self):
         if self.mcmc.mc.sampler is None:
             ui.notify("No chain available; re-run MCMC", type="negative")
             return
@@ -556,21 +636,26 @@ class BayesPanel(BaseComponent):
         self._apply_chain_container_style(self.result_chains, ndim)
         self._apply_corner_container_style(ndim)
 
-        f = self.result_chains.figure
-        f.clear()
+        def _plot_chain_sync(fig, mc, w, h):
+            fig.clear()
+            self._set_figure_size(fig, w, h)
+            mc.plot_chain(fig=fig)
+            fig.tight_layout()
+
         w, h = self._chain_figsize(ndim)
-        self._set_figure_size(f, w, h)
-        self.mcmc.mc.plot_chain(fig=f)
-        f.tight_layout()
+        await run.io_bound(_plot_chain_sync, self.result_chains.figure, self.mcmc.mc, w, h)
         self.result_chains.update()
 
-        f = self.result_corner.figure
-        f.clear()
-        cw, ch = self._corner_figsize(ndim)
-        self._set_figure_size(f, cw, ch)
         burnin = self._get_burnin(notify=True)
-        self.mcmc.mc.make_corner_fig(burnin=burnin, fig=f)
-        f.tight_layout()
+
+        def _plot_corner_sync(fig, mc, burnin, cw, ch):
+            fig.clear()
+            self._set_figure_size(fig, cw, ch)
+            mc.make_corner_fig(burnin=burnin, fig=fig)
+            fig.tight_layout()
+
+        cw, ch = self._corner_figsize(ndim)
+        await run.io_bound(_plot_corner_sync, self.result_corner.figure, self.mcmc.mc, burnin, cw, ch)
         self.result_corner.update()
 
     async def _download_figure(self, fig, filename: str) -> None:
@@ -583,13 +668,19 @@ class BayesPanel(BaseComponent):
         if not hasattr(self, "mcmc") or self.mcmc.mc is None or self.mcmc.mc.sampler is None:
             ui.notify("No chain figure available for download.", type="warning")
             return
+        ui.notify("Generating chain figure for download...", type="info")
         ndim = int(self.mcmc.mc.sampler.ndim)
         fig = plt.figure()
         w, h = self._chain_figsize(ndim)
         fig.set_dpi(_EXPORT_DPI)
         fig.set_size_inches(w * 1.2, h * 1.2, forward=True)
-        self.mcmc.mc.plot_chain(fig=fig)
-        fig.tight_layout()
+
+        def _plot(f, mc):
+            mc.plot_chain(fig=f)
+            f.tight_layout()
+
+        await run.io_bound(_plot, fig, self.mcmc.mc)
+
         active_fit = self.sm.active_fit_or_none
         stem = active_fit.name if active_fit is not None else "mcmc"
         filename = f"{safe_filename(stem, fallback='mcmc')}_chains.png"
@@ -600,19 +691,64 @@ class BayesPanel(BaseComponent):
         if not hasattr(self, "mcmc") or self.mcmc.mc is None or self.mcmc.mc.sampler is None:
             ui.notify("No corner figure available for download.", type="warning")
             return
+        ui.notify("Generating corner figure for download...", type="info")
         ndim = int(self.mcmc.mc.sampler.ndim)
         fig = plt.figure()
         w, h = self._corner_figsize(ndim)
         fig.set_dpi(_EXPORT_DPI)
         fig.set_size_inches(w * 1.2, h * 1.2, forward=True)
         burnin = self._get_burnin(notify=False)
-        self.mcmc.mc.make_corner_fig(burnin=burnin, fig=fig)
-        fig.tight_layout()
+
+        def _plot(f, mc, burnin):
+            mc.make_corner_fig(burnin=burnin, fig=f)
+            f.tight_layout()
+
+        await run.io_bound(_plot, fig, self.mcmc.mc, burnin)
+
         active_fit = self.sm.active_fit_or_none
         stem = active_fit.name if active_fit is not None else "mcmc"
         filename = f"{safe_filename(stem, fallback='mcmc')}_corner.png"
         await self._download_figure(fig, filename)
         plt.close(fig)
+
+    def _open_advanced_settings_dialog(self) -> None:
+        with ui.dialog() as dialog, ui.card().classes("min-w-[24rem] p-6 rounded-lg shadow-lg"):
+            ui.label("Advanced MCMC Settings").classes("text-lg font-bold mb-2")
+            ui.label("Control how MCMC chains are thinned for plotting and export.").classes("text-xs text-gray-500 mb-4")
+
+            ui.label("Max points to retain (per walker):").classes("text-sm font-semibold mb-1")
+            max_points_input = ui.number(value=self.mcmc_max_points, min=10, max=1000000).classes("w-full mb-2")
+
+            thin_label = ui.label("").classes("text-xs text-gray-500 font-medium bg-gray-50 p-2 rounded w-full")
+
+            def update_thin_factor():
+                try:
+                    nsteps = int(self.nsteps_input.value)
+                    max_pts = int(max_points_input.value or 1000)
+                    thin = max(1, nsteps // max_pts)
+                    retained = nsteps // thin
+                    thin_label.text = f"Calculated thinning factor: {thin} (retains {retained} points)"
+                except Exception:
+                    thin_label.text = "Invalid steps or points value"
+
+            max_points_input.on_value_change(update_thin_factor)
+            update_thin_factor()  # Initial update
+
+            async def save_settings():
+                self.mcmc_max_points = int(max_points_input.value or 1000)
+                # If MCMCSim exists, update its values
+                if hasattr(self, "mcmc") and self.mcmc is not None:
+                    self.mcmc.max_retained_points = self.mcmc_max_points
+                    self.mcmc.thin = max(1, self.mcmc.nsteps_target // self.mcmc_max_points)
+                    self.sm.save_to_storage()
+                dialog.close()
+                ui.notify("Advanced settings saved.", type="positive")
+
+            with ui.row().classes("mt-6 gap-2 justify-end w-full"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Save", on_click=save_settings).props("color=primary")
+
+        dialog.open()
 
     # ------------------------------------------------------------------
     # Notebook export
