@@ -235,8 +235,8 @@ class FittingPanel(BaseComponent):
 
         with self.container:
             ui.label("Fitting panel").classes("text-lg font-bold mb-4")
-            with ui.row():
-                with ui.card():
+            with ui.row().classes("w-full gap-4 items-start flex-col lg:flex-row"):
+                with ui.card().classes("w-full lg:w-80 shrink-0"):
                     ui.label("Fitting options to go here.")
                     self.fit_alg_select = ui.select(
                         ["least_squares", "l-bfgs", "ampgo"],
@@ -708,7 +708,7 @@ class FittingPanel(BaseComponent):
 class FitResultsCard(BaseComponent):
     def setup_nicegui(self) -> None:
 
-        with ui.card():
+        with ui.card().classes("w-full lg:flex-1 min-w-0 overflow-hidden"):
             # ui.label("Fitting Results to go here.")
             with ui.row().classes("w-full"):
                 ui.label("Results:")
