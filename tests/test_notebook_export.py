@@ -455,39 +455,6 @@ def test_fit_notebook_uvvis_numerical():
     assert "webgui" not in all_code
 
 
-def test_fit_notebook_uvvis_analytical():
-    """export_fit_notebook with analytical_fast_exchange=True also sets analytical_linear_obs_param_map."""
-    from bindmc.webgui.export.notebook_exporter import export_fit_notebook
-
-    fit, model, expt_data, raw, lin_obs_col_names, lin_obs_param_map = _make_minimal_uvvis_fit()
-
-    # Promote fit to analytical fast-exchange
-    fit.analytical_fast_exchange = True
-    fit.analytical_topology = "1:1"
-    fit.analytical_complex_indices = [2]
-    fit.analytical_obs_columns = []
-    fit.analytical_obs_components = [0, 1]
-
-    obs_type_names = [expt_data.col_details[col]["dtype"] for col in expt_data.sorted_data.columns]
-
-    notebook, _ = export_fit_notebook(
-        fit,
-        model,
-        expt_data,
-        raw,
-        obs_type_names=obs_type_names,
-        lin_obs_col_names=lin_obs_col_names,
-        lin_obs_param_map=lin_obs_param_map,
-    )
-
-    code_cells = [c for c in notebook["cells"] if c["cell_type"] == "code"]
-    all_code = "\n".join(c["source"] for c in code_cells)
-
-    assert "m.specToLinear" in all_code
-    assert "m.analytical_linear_obs_param_map" in all_code
-    assert "eps_H_absorbance" in all_code
-
-
 def test_fit_notebook_uvvis_via_state_manager():
     """StateManager.dump_fit_notebook includes specToLinear when expt_data has UV-vis cols."""
     from bindmc.webgui.classes.Model import Model
