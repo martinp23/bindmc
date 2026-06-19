@@ -30,8 +30,6 @@ class FitResult:
     bd_model: Optional[bd.bindingModel] = None
     analytical_fast_exchange: bool = False
     analytical_topology: Optional[str] = None
-    analytical_obs_columns: list[str] = field(default_factory=list)
-    analytical_obs_components: list[int] = field(default_factory=list)
     analytical_complex_indices: list[int] = field(default_factory=list)
 
     init_model: InitVar[Optional[Model]] = None  # The model used for the fit, if any
@@ -150,8 +148,6 @@ class FitResult:
             "success": self.success,
             "analytical_fast_exchange": self.analytical_fast_exchange,
             "analytical_topology": self.analytical_topology,
-            "analytical_obs_columns": list(self.analytical_obs_columns),
-            "analytical_obs_components": list(self.analytical_obs_components),
             "analytical_complex_indices": list(self.analytical_complex_indices),
             "fit_speciation": (
                 self.fit_speciation.to_dict(orient="list") if isinstance(self.fit_speciation, pd.DataFrame) else {}

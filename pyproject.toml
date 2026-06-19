@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "bindmc"
-version = "0.1.6"
+version = "0.1.7"
 readme = "README.md"
 keywords = ["chemistry", "analytical chemistry", "binding constants", "supramolecular"]
 classifiers = [
@@ -28,7 +28,7 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     "arviz==0.21.0",
-    "bindtools>=0.2.1",
+    "bindtools>=0.2.2",
     "corner==2.2.3",
     "emcee==3.1.6",
     "h5py>=3.14.0",

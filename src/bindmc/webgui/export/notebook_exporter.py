@@ -239,17 +239,7 @@ def _build_lin_obs_cell4_lines(
     return lines
 
 
-def _build_analytical_lin_obs_lines(lin_obs_param_map: list) -> list[str]:
-    """Return setup lines for the analytical path's linear_obs_param_map.
 
-    Extracts the param name (or None) from each cell so
-    fitfun_analytical_fast_exchange can call calc_analytical_linear_observables.
-    """
-    # Serialise as [[name_or_none, ...], ...]
-    name_map = [[cell["name"] if cell is not None else None for cell in row] for row in lin_obs_param_map]
-    return [
-        f"m.analytical_linear_obs_param_map = {name_map!r}",
-    ]
 
 
 def export_fit_notebook(
@@ -382,7 +372,31 @@ def export_fit_notebook(
         spec_to_integ_arg = "None"
 
     if has_delta:
-        spec_to_dd_line = f"spec_to_dd = np.array({delta_to_spec.T.tolist()!r}, dtype=object)"
+        # Build spec_to_dd reconstruction lines dynamically to properly instantiate lmfit.Parameters
+        spec_to_dd_lines = [
+            "spec_to_dd = np.empty((len(species_names), len(obs_list)), dtype=object)"
+        ]
+        delta_T = delta_to_spec.T
+        for i in range(delta_T.shape[0]):
+            for j in range(delta_T.shape[1]):
+                cell = delta_T[i, j]
+                if cell is None:
+                    spec_to_dd_lines.append(f"spec_to_dd[{i}, {j}] = None")
+                elif isinstance(cell, (int, float, np.floating)):
+                    if np.isnan(cell):
+                        spec_to_dd_lines.append(f"spec_to_dd[{i}, {j}] = None")
+                    else:
+                        spec_to_dd_lines.append(f"spec_to_dd[{i}, {j}] = {float(cell)!r}")
+                else: # lmfit.Parameter
+                    pname = getattr(cell, "name", "")
+                    pval = getattr(cell, "value", 0.0)
+                    pmin = getattr(cell, "min", -np.inf)
+                    pmax = getattr(cell, "max", np.inf)
+                    pvary = getattr(cell, "vary", True)
+                    spec_to_dd_lines.append(
+                        f"spec_to_dd[{i}, {j}] = lmfit.Parameter({pname!r}, value={pval!r}, min={pmin!r}, max={pmax!r}, vary={pvary!r})"
+                    )
+        spec_to_dd_line = "\n".join(spec_to_dd_lines)
         spec_to_dd_arg = "spec_to_dd"
     else:
         spec_to_dd_line = "spec_to_dd = None"
@@ -390,8 +404,6 @@ def export_fit_notebook(
 
     is_analytical = bool(getattr(fit, "analytical_fast_exchange", False))
     analytical_topology = getattr(fit, "analytical_topology", None)
-    analytical_obs_columns = list(getattr(fit, "analytical_obs_columns", []))
-    analytical_obs_components = list(getattr(fit, "analytical_obs_components", []))
     analytical_complex_indices = list(getattr(fit, "analytical_complex_indices", []))
 
     has_lin_obs = bool(lin_obs_col_names and lin_obs_param_map)
@@ -399,15 +411,11 @@ def export_fit_notebook(
     if is_analytical:
         analytical_setup_lines: list[str] = [
             "",
-            "# Analytical fast-exchange backend — must be configured before prepModel()",
+            "# Analytical fast-exchange speciation",
             "m.analytical_fast_exchange = True",
             f"m.analytical_topology = {analytical_topology!r}",
-            f"m.analytical_obs_columns = {analytical_obs_columns!r}",
-            f"m.analytical_obs_components = {analytical_obs_components!r}",
             f"m.analytical_complex_indices = {analytical_complex_indices!r}",
         ]
-        if has_lin_obs:
-            analytical_setup_lines += _build_analytical_lin_obs_lines(lin_obs_param_map)  # type: ignore[arg-type]
     else:
         analytical_setup_lines = []
 

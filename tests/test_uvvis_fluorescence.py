@@ -130,52 +130,7 @@ class TestConcToObservableLinear:
         np.testing.assert_allclose(result[0, 1], 6.0)  # linear: 0*1+3*2
 
 
-# ---------------------------------------------------------------------------
-# 3. calc_analytical_linear_observables
-# ---------------------------------------------------------------------------
 
-
-class TestCalcAnalyticalLinearObservables:
-    def test_single_observable_no_dark(self):
-        """A = eps_H * [H] + eps_HG * [HG]."""
-        # 2 species, 3 points
-        spec_calc = np.array([[0.5, 0.5], [0.3, 0.7], [0.1, 0.9]])
-        linear_obs_param_map = [["eps_H_abs", "eps_HG_abs"]]
-        linear_param_values = np.array([1000.0, 5000.0])  # eps_H=1000, eps_HG=5000
-        linear_param_names = ["eps_H_abs", "eps_HG_abs"]
-
-        out = bd.calc_analytical_linear_observables(
-            spec_calc, linear_param_values, linear_param_names, linear_obs_param_map
-        )
-        expected = np.array(
-            [
-                [1000 * 0.5 + 5000 * 0.5],
-                [1000 * 0.3 + 5000 * 0.7],
-                [1000 * 0.1 + 5000 * 0.9],
-            ]
-        )
-        np.testing.assert_allclose(out, expected)
-
-    def test_dark_species_contributes_zero(self):
-        """Species with None param name is treated as dark (zero contribution)."""
-        spec_calc = np.array([[1.0, 0.5]])
-        # first species is dark
-        linear_obs_param_map = [[None, "eps_G_abs"]]
-        linear_param_values = np.array([200.0])
-        linear_param_names = ["eps_G_abs"]
-
-        out = bd.calc_analytical_linear_observables(
-            spec_calc, linear_param_values, linear_param_names, linear_obs_param_map
-        )
-        np.testing.assert_allclose(out, [[100.0]])  # only 200 * 0.5
-
-    def test_output_shape(self):
-        spec_calc = np.ones((5, 3))
-        linear_obs_param_map = [["a", "b", "c"], ["d", "e", "f"]]
-        params = np.ones(6)
-        names = ["a", "b", "c", "d", "e", "f"]
-        out = bd.calc_analytical_linear_observables(spec_calc, params, names, linear_obs_param_map)
-        assert out.shape == (5, 2)
 
 
 # ---------------------------------------------------------------------------
@@ -467,67 +422,4 @@ class TestNumericalUVvisFit:
         )
 
 
-# ---------------------------------------------------------------------------
-# 9. End-to-end: analytical path with synthetic UV-vis data
-# ---------------------------------------------------------------------------
 
-
-class TestAnalyticalUVvisFit:
-    """Verify the analytical fast-exchange path works for UV-vis observables."""
-
-    def test_analytical_uvvis_fit_recovers_log_beta(self):
-        """fitfun_analytical_fast_exchange with UV-vis observables recovers log_beta."""
-        log_beta_true = 6.0
-        H_total = 1e-4
-        n_pts = 20
-        eps_H = 1000.0
-        eps_HG = 5000.0
-
-        G_total = np.linspace(0, 2e-4, n_pts)
-        beta = 10**log_beta_true
-        b_coef = -(H_total + G_total + 1.0 / beta)
-        c_coef = H_total * G_total
-        HG = (-b_coef - np.sqrt(b_coef**2 - 4 * c_coef)) / 2.0
-        H_free = H_total - HG
-        G_free = G_total - HG
-        absorbance = eps_H * H_free + eps_HG * HG
-
-        comp_concs = np.column_stack([np.full(n_pts, H_total), G_total])
-        eq_mat = np.array([[1, 0, 1], [0, 1, 1]], dtype=float)  # (2 comps, 3 species)
-        raw_data = np.hstack([comp_concs, absorbance.reshape(-1, 1)])
-
-        eps_H_p = LMFitParameter("eps_H_free_abs", value=800.0, min=0.1, max=1e5)
-        eps_G_p = LMFitParameter("eps_G_free_abs", value=0.0, min=-1e-10, max=1e-10, vary=False)
-        eps_HG_p = LMFitParameter("eps_HG_abs", value=3000.0, min=0.1, max=1e5)
-
-        specToLinear = np.empty((3, 1), dtype=object)
-        specToLinear[0, 0] = eps_H_p
-        specToLinear[1, 0] = eps_G_p
-        specToLinear[2, 0] = eps_HG_p
-
-        model = bd.bindingModel(
-            eqMat=eq_mat,
-            compNames=["H", "G"],
-            speciesList=["H", "G", "HG"],
-            colToComp=np.eye(2),
-            rawData=raw_data,
-        )
-        model.specToLinear = specToLinear
-        model.analytical_fast_exchange = True
-        model.analytical_topology = "1:1"
-        model.analytical_complex_indices = [2]  # HG is species index 2
-        model.analytical_obs_columns = []  # no NMR shift columns
-        model.analytical_obs_components = []
-        # analytical_linear_obs_param_map: per obs-col, per species
-        model.analytical_linear_obs_param_map = [
-            ["eps_H_free_abs", None, "eps_HG_abs"]  # species: H_free, G_free, HG
-        ]
-
-        model.prepModel()
-        model.params["eps_G_free_abs"].set(value=0.0, vary=False, min=-1e-10, max=1e-10)
-
-        model.runModel(skip_col=2, method="least_squares")
-
-        assert model.miniResult is not None
-        recovered = model.miniResult.params["logHG"].value
-        assert abs(recovered - log_beta_true) < 0.2, f"Expected logβ ≈ {log_beta_true}, got {recovered:.3f}"
