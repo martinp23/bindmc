@@ -38,7 +38,7 @@ dependencies = [
     "nicegui[plotly]==3.3.1",
     "numba>=0.65.1",
     "numpy>=2.3.5",
-    "openpyxl==3.1.2",
+    "openpyxl>=3.1.5",
     "pandas>=2.3.3",
     "platformdirs>=3.0.0",
     "pywebview>=5",
