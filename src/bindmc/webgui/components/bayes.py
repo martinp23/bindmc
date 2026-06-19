@@ -244,6 +244,16 @@ class BayesPanel(BaseComponent):
             ui.notify("No active fit result.", type="warning")
             return
 
+        ndim = self.get_ndim()
+        min_walkers = 2 * ndim
+        nwalkers = int(self.nwalkers_input.value)
+        if nwalkers < min_walkers:
+            ui.notify(
+                f"You need at least {min_walkers} parameters.",
+                type="warning",
+            )
+            return
+
         if active_fit.bd_model is None:
             logger.info("No bindtools model selected for fitting, generating one.")
             ui.notify("Running an initial fit using least_sq")
@@ -351,9 +361,11 @@ class BayesPanel(BaseComponent):
                 self.progress_label.text = f"MCMC Complete! ({total_steps} steps with {nwalkers} walkers)"
                 self._log_status("MCMC analysis completed successfully")
                 ui.notify("MCMC analysis completed successfully!", type="positive")
-
+                self._log_status("Generating result figures... this may take a while...")
                 # Update results
                 self._update_results(self.mcmc)
+                self._log_status("Figure generation complete!")
+
 
         except Exception as e:
             self.progress_label.text = "Analysis failed"
@@ -547,6 +559,58 @@ class BayesPanel(BaseComponent):
         ):
             self.mcmc = found_mcmc
             self._update_results(self.mcmc)
+            self.nwalkers_input.set_value(found_mcmc.nwalkers)
+            ndim = self.get_ndim()
+            self.nwalkers_input.min = max(2, 2 * ndim)
+        else:
+            self.update_default_walkers()
+
+    def get_ndim(self) -> int:
+        active_fit = self.sm.active_fit_or_none
+        if active_fit is None:
+            return 0
+
+        varying_params = 0
+        if getattr(active_fit, "params", None):
+            varying_params = sum(1 for p in active_fit.params.values() if isinstance(p, dict) and p.get("vary") is True)
+        elif active_fit.bd_model is not None:
+            if active_fit.bd_model.miniResult is not None:
+                varying_params = sum(1 for p in active_fit.bd_model.miniResult.params.values() if p.vary)
+            elif active_fit.bd_model.params is not None:
+                varying_params = sum(1 for p in active_fit.bd_model.params.values() if p.vary)
+
+        unique_dtypes = set()
+        expt_data = self.sm.active_expt_data_or_none
+        if expt_data is not None:
+            for col, details in expt_data.col_details.items():
+                if details.get("depindep") == "dep":
+                    dtype_key = details.get("dtype")
+                    if dtype_key is not None:
+                        edt = self.sm._expt_dtypes.get(dtype_key)
+                        if edt is not None:
+                            unique_dtypes.add(edt.meas)
+
+        return varying_params + len(unique_dtypes)
+
+    def update_default_walkers(self) -> None:
+        active_fit = self.sm.active_fit_or_none
+        if active_fit is None:
+            return
+
+        ndim = self.get_ndim()
+        default_walkers = 2 * ndim
+        self.nwalkers_input.min = max(2, default_walkers)
+
+        found_mcmc = self._fit_to_mcmc.get(active_fit.id)
+        if (
+            found_mcmc is not None
+            and getattr(found_mcmc, "mc", None) is not None
+            and getattr(found_mcmc.mc, "sampler", None) is not None
+        ):
+            self.nwalkers_input.set_value(found_mcmc.nwalkers)
+        else:
+            self.nwalkers_input.set_value(default_walkers)
+
 
     async def _make_result_graphs(self):
         if self.mcmc.mc.sampler is None:
