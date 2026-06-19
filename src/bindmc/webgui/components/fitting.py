@@ -725,7 +725,7 @@ class FitResultsCard(BaseComponent):
         for fit in self.sm.fits.values():
             row = {
                 "name": fit.name,
-                "chisqr": self.rounded_value(fit.chisqr),
+                "chisqr": self.rounded_value(fit.chisqr,scientific=True),
                 "aic": self.rounded_value(fit.aic, dp=1),
                 "bic": self.rounded_value(fit.bic, dp=1),
                 "message": fit.termination_message,
@@ -742,10 +742,10 @@ class FitResultsCard(BaseComponent):
         self.add_body_slot()
         self.table.update()
 
-    def rounded_value(self, value: float, dp: int = 3) -> str:
+    def rounded_value(self, value: float, dp: int = 3, scientific=False) -> str:
         """Round the value for display."""
-        if abs(value) >= 10000 or abs(value) < 0.001:
-            return f"{value:.4e}"
+        if abs(value) >= 10000 or abs(value) < 0.001 or scientific:
+            return f"{value:.3e}"
         else:
             return f"{value:.{dp}f}" if isinstance(value, float) else str(value)
 
