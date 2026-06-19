@@ -775,7 +775,14 @@ class FitResultsCard(BaseComponent):
 
         fitParams = list(dict.fromkeys(fitParams))  # Remove duplicates
 
-        paramCols = [{"name": param, "label": param, "field": param} for param in fitParams]
+        paramCols = [
+            {
+                "name": param,
+                "label": f"logK({param[3:]})" if param.startswith("log") else param,
+                "field": param,
+            }
+            for param in fitParams
+        ]
 
         stat_col_names = {"chisqr", "aic", "bic", "message", "covariance"}
         stat_cols = [c for c in self.default_columns if c["name"] in stat_col_names]
