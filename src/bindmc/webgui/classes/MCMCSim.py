@@ -25,6 +25,7 @@ class MCMCSim:
 
     burn: int = 100
     thin: int = 1
+    max_retained_points: int = 1000
     seed: Optional[int] = None
     chains: np.ndarray = field(default_factory=lambda: np.array([]))  # Array to hold the MCMC chains
     priors: list[dict[str, Any]] = field(default_factory=list)
@@ -198,11 +199,17 @@ class MCMCSim:
                     logger.info("MCMC run cancelled.")
                     return self.mc
                 chunk_size = self.chunk_size_val.value
-                samples = min(chunk_size, self.nsteps_target - self.nsteps_done)
-                b = io.StringIO()
-                self.mc.run(samples=samples, pool=pool, tqdm_kwargs={"file": b})
+                remaining_raw = self.nsteps_target - self.nsteps_done
+                raw_chunk = min(chunk_size, remaining_raw)
 
-                self.nsteps_done += samples
+                # Convert raw chunk size to stored samples chunk size based on thin factor
+                samples_stored = max(1, raw_chunk // self.thin)
+                actual_raw = samples_stored * self.thin
+
+                b = io.StringIO()
+                self.mc.run(samples=samples_stored, thin=self.thin, pool=pool, tqdm_kwargs={"file": b})
+
+                self.nsteps_done += actual_raw
                 self.q_percent_done.put(self.nsteps_done / self.nsteps_target)
                 self.q2_tqdm_out.put(b.getvalue().splitlines()[-1])
                 if self.mc.sampler is not None:

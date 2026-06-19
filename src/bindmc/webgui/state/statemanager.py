@@ -1111,6 +1111,7 @@ class StateManager:
                         "model_id": str(m.model_id) if m.model_id else None,
                         "expt_data_id": str(m.expt_data_id) if m.expt_data_id else None,
                         "nsteps_done": m.nsteps_done,
+                        "max_retained_points": m.max_retained_points,
                     }
                     for m in self.mcmcs.values()
                 ]

@@ -122,6 +122,10 @@ class BayesPanel(BaseComponent):
                             "Export to Notebook",
                             on_click=self._open_export_dialog,
                         ).classes("mt-2")
+                        self.advanced_settings_button = ui.button(
+                            "Advanced Settings",
+                            on_click=self._open_advanced_settings_dialog,
+                        ).classes("mt-2")
 
             # Control buttons
             with ui.row().classes("mt-4"):
@@ -162,6 +166,7 @@ class BayesPanel(BaseComponent):
         self.is_running = False
         self.should_stop = False
         self.completed_steps = 0
+        self.mcmc_max_points = 1000
         self.progress_timer = None
         self.status_timer = None
         self.graph_timer = None
@@ -205,8 +210,8 @@ class BayesPanel(BaseComponent):
             tau = e.tau
             if notify:
                 s = (
-                    f"Autocorrelation time is likely too short. Max tau is {int(np.max(tau))}; "
-                    f"nsteps is {self.completed_steps}. Re-run for at least {int(50 * np.max(tau))} steps."
+                    f"Autocorrelation time is likely too short. Max tau is {int(np.max(tau))* self.mcmc.thin}; "
+                    f"nsteps is {self.completed_steps} (before thinning). Re-run for at least {int(50 * np.max(tau) * self.mcmc.thin)} steps."
                 )
                 ui.notify(s, type="warning")
                 self.result_area.content += f"""
@@ -272,6 +277,9 @@ class BayesPanel(BaseComponent):
         nwalkers = int(self.nwalkers_input.value)
         obslist = self.sm.active_expt_data.get_obs_list(self.sm._expt_dtypes)
 
+        # Calculate thinning factor dynamically based on max points limit
+        thin = max(1, nsteps_target // self.mcmc_max_points)
+
         logger.info("Setting up for MCMC run")
         # Create MCMC simulation (not yet registered in state)
         self.mcmc = MCMCSim(
@@ -280,6 +288,8 @@ class BayesPanel(BaseComponent):
             bd_model=active_fit.bd_model,
             nwalkers=nwalkers,
             nsteps_target=nsteps_target,
+            thin=thin,
+            max_retained_points=self.mcmc_max_points,
             priors=list(self.prior_editor.priors) if self.prior_editor.priors else [],
         )
         self.mcmc.setup(obslist)
@@ -453,7 +463,10 @@ class BayesPanel(BaseComponent):
                     for w in walkers_to_plot:
                         axs[d].plot(chains[:, w, d], label=f"Dim {d} Walker {w}")
                         axs[d].set_title(f"Parameter {d}")
-                        axs[d].set_xlabel("Steps")
+                        if self.mcmc.thin != 1:
+                            axs[d].set_xlabel(f"Steps (thinning 1-in-{self.mcmc.thin} points)")
+                        else:
+                            axs[d].set_xlabel(f"Steps")
 
                 # Plot acceptance fraction
                 axs[-1].bar(range(nwalkers), acceptance_frac)
@@ -560,9 +573,12 @@ class BayesPanel(BaseComponent):
             self.mcmc = found_mcmc
             self._update_results(self.mcmc)
             self.nwalkers_input.set_value(found_mcmc.nwalkers)
+            self.nsteps_input.set_value(found_mcmc.nsteps_target)
+            self.mcmc_max_points = getattr(found_mcmc, "max_retained_points", 1000)
             ndim = self.get_ndim()
             self.nwalkers_input.min = max(2, 2 * ndim)
         else:
+            self.mcmc_max_points = 1000
             self.update_default_walkers()
 
     def get_ndim(self) -> int:
@@ -694,6 +710,45 @@ class BayesPanel(BaseComponent):
         filename = f"{safe_filename(stem, fallback='mcmc')}_corner.png"
         await self._download_figure(fig, filename)
         plt.close(fig)
+
+    def _open_advanced_settings_dialog(self) -> None:
+        with ui.dialog() as dialog, ui.card().classes("min-w-[24rem] p-6 rounded-lg shadow-lg"):
+            ui.label("Advanced MCMC Settings").classes("text-lg font-bold mb-2")
+            ui.label("Control how MCMC chains are thinned for plotting and export.").classes("text-xs text-gray-500 mb-4")
+
+            ui.label("Max points to retain (per walker):").classes("text-sm font-semibold mb-1")
+            max_points_input = ui.number(value=self.mcmc_max_points, min=10, max=1000000).classes("w-full mb-2")
+
+            thin_label = ui.label("").classes("text-xs text-gray-500 font-medium bg-gray-50 p-2 rounded w-full")
+
+            def update_thin_factor():
+                try:
+                    nsteps = int(self.nsteps_input.value)
+                    max_pts = int(max_points_input.value or 1000)
+                    thin = max(1, nsteps // max_pts)
+                    retained = nsteps // thin
+                    thin_label.text = f"Calculated thinning factor: {thin} (retains {retained} points)"
+                except Exception:
+                    thin_label.text = "Invalid steps or points value"
+
+            max_points_input.on_value_change(update_thin_factor)
+            update_thin_factor()  # Initial update
+
+            async def save_settings():
+                self.mcmc_max_points = int(max_points_input.value or 1000)
+                # If MCMCSim exists, update its values
+                if hasattr(self, "mcmc") and self.mcmc is not None:
+                    self.mcmc.max_retained_points = self.mcmc_max_points
+                    self.mcmc.thin = max(1, self.mcmc.nsteps_target // self.mcmc_max_points)
+                    self.sm.save_to_storage()
+                dialog.close()
+                ui.notify("Advanced settings saved.", type="positive")
+
+            with ui.row().classes("mt-6 gap-2 justify-end w-full"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Save", on_click=save_settings).props("color=primary")
+
+        dialog.open()
 
     # ------------------------------------------------------------------
     # Notebook export

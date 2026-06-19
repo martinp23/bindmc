@@ -282,14 +282,17 @@ def test_mcmc_notebook_exported_hdf_bytes_reopen_cleanly():
     fake_mcmc = SimpleNamespace(
         nwalkers=4,
         nsteps_target=3,
-        thin=1,
+        thin=2,
         burn=1,
         mc=SimpleNamespace(sampler=sampler),
     )
 
-    _, _, h5_bytes = sm.dump_mcmc_notebook(mcmc=fake_mcmc, include_chains=True)
+    notebook, _, h5_bytes = sm.dump_mcmc_notebook(mcmc=fake_mcmc, include_chains=True)
 
     assert h5_bytes is not None
+
+    all_code = "\n".join(c["source"] for c in notebook["cells"] if c["cell_type"] == "code")
+    assert "thin     = f['mcmc'].attrs.get('thin', 1)" in all_code
 
     tmp = tempfile.NamedTemporaryFile(suffix=".hdf", delete=False)
     try:
@@ -302,6 +305,7 @@ def test_mcmc_notebook_exported_hdf_bytes_reopen_cleanly():
             np.testing.assert_array_equal(group["accepted"][:], backend.accepted)
             np.testing.assert_array_equal(group["log_prob"][:], backend.log_prob)
             assert group.attrs["iteration"] == backend.iteration
+            assert group.attrs["thin"] == 2
             assert bool(group.attrs["has_blobs"]) is False
     finally:
         try:
