@@ -443,7 +443,7 @@ class ExptData:
                     species_key = species_names[j]
                     parameter_matrix[i, j] = _get_parameter_for_species(species_key, delta_col)
                 else:
-                    parameter_matrix[i, j] = 0.0
+                    parameter_matrix[i, j] = None
 
         self.delta_to_spec = parameter_matrix
         return parameter_matrix

@@ -140,14 +140,15 @@ class DataModelPanel(BaseComponent):
 
         with self.dataModel_specInteg_block:
             self.spec_integ_inps: dict[str, ui.input] = {}
+            self.spec_integ_cbs: dict[str, ui.checkbox] = {}
             for i, spec in enumerate(self.sm.species):
                 with ui.row().classes("items-center"):
                     ui.label(f"Species conc. [{spec}]_free:")
                     self.spec_integ_inps[spec] = ui.input().classes("flex-1").props("clearable")
 
                     self.spec_integ_inps[spec].on("blur", lambda c=self.spec_integ_inps[spec]: self.set_focus(c))
-                    b = ui.checkbox("Enabled", value=True).props(f"testid=spec-enabled-{spec}")
-                    self.spec_integ_inps[spec].bind_enabled_from(b, "value")
+                    self.spec_integ_cbs[spec] = ui.checkbox("Enabled", value=True).props(f"testid=spec-enabled-{spec}")
+                    self.spec_integ_inps[spec].bind_enabled_from(self.spec_integ_cbs[spec], "value")
                     if (
                         hasattr(active_expt, "integ_to_spec")
                         and active_expt.integ_to_spec is not None
@@ -157,9 +158,9 @@ class DataModelPanel(BaseComponent):
                             active_expt.integ_to_spec[i], active_expt.columns
                         )
                         if self.spec_integ_inps[spec].value == "":
-                            b.value = False
+                            self.spec_integ_cbs[spec].value = False
                     else:
-                        b.value = False
+                        self.spec_integ_cbs[spec].value = False
 
     def _gen_spec_fast_exchange_block(self):
         """Generate the species fast exchange block.
@@ -227,95 +228,94 @@ class DataModelPanel(BaseComponent):
         self.fast_ex_chem_shift_params = []
         # map per spec-delta index -> { species_name: {card, shift_num, fixed_cb, min_num, max_num} }
         self.fast_ex_chem_shift_map = []
+        self.specDeltaCbs = []
 
         # keep the fast-exchange column names for later processing and bindings
         self.fast_ex_list_names = list(fast_ex_list)
-        if len(extra_deps) > 0:
-            with self.dataModel_specFastExchange_block:
-                # species_list = [f'{x}_free' for x in self.sm.species]
+        with self.dataModel_specFastExchange_block:
+            # species_list = [f'{x}_free' for x in self.sm.species]
 
-                # default_shift_species = _default_analytical_shift_species(
-                #     self.sm.active_model.eq_mat,
-                #     list(self.sm.active_model.component_names),
-                #     species_list,
-                #     len(self.fast_ex_list_names),
-                # )
-                # if default_shift_species is not None:
-                #     ui.label(
-                #         f"Analytical model detected: defaulting fast-exchange expression to [{default_shift_species}] "
-                #         "for this observable. You can edit it if needed."
-                #     ).classes("text-xs text-gray-600")
+            default_shift_species = None
+            if simple_model is not None and len(simple_model[1]) > 0:
+                default_shift_species = f"{self.sm.species[simple_model[1][0]]}_free"
 
-                for i, shift in enumerate(self.fast_ex_list_names):
-                    # card per chemical shift column
-                    card = ui.card().classes("mb-2")
-                    self.specDeltaCards.append(card)
-                    with card:
-                        ui.label(f"Fast exchange shift {i + 1} ({shift})").classes("text-sm font-semibold")
-                        with ui.row().classes("items-center"):
-                            inp = ui.input().classes("flex-1").props("clearable")
-                            self.specDeltaInps.append(inp)
-                            # species chips row will be added below the input to allow quick insertion
-                            with ui.row().classes("gap-1 mt-2"):
-                                for text in [f"{x}_free" for x in self.sm.species]:
-                                    ui.chip(
-                                        text,
-                                        color="teal",
-                                        on_click=lambda h=text: self._insert_species_into_fast_inp(h),
-                                    )
-                            # placeholder checkbox to enable the input
-                            en_cb = ui.checkbox("Enabled", value=True)
-                            inp.bind_enabled_from(en_cb, "value")
-                            # placeholder param block element (initially empty/hidden)
-                            pb = ui.element()
-                            self.fast_ex_chem_shift_blocks.append(pb)
-                            self.fast_ex_chem_shift_map.append({})
-                            # store param dict for later
-                            # self.fast_ex_chem_shift_params.append({'shift': None, 'fixed': False, 'min': None, 'max': None})
+            if default_shift_species is not None:
+                ui.label(
+                    f"Analytical model detected: defaulting fast-exchange expression to [{default_shift_species}] "
+                    "for this observable. You can edit it if needed."
+                ).classes("text-xs text-gray-600")
 
-                            # bind blur handler to create/update parameter block
-                            # use default args to capture current inp and index
-                            # allow chips/clicks to insert into this input by remembering last focus
-                            inp.on("focus", lambda e, widget=inp: self.set_focus(widget))
-                            inp.on("click", lambda e, widget=inp: self.set_focus(widget))
-                            # handle blur to create/update parameter sub-blocks
-                            inp.on("blur", lambda e, idx=i, widget=inp: self._handle_spec_delta_blur(idx, widget))
-                            # immediate change handler: reparse on every change
-                            inp.on_value_change(lambda e, idx=i, widget=inp: self._handle_spec_delta_blur(idx, widget))
-
-                            # if there is saved delta_to_spec data, populate the input
-                            if (
-                                hasattr(active_expt, "delta_to_spec")
-                                and active_expt.delta_to_spec is not None
-                                and len(active_expt.delta_to_spec) > 0
-                            ):
-                                delta_for_eqn = active_expt.delta_to_spec[i].copy()
-
-                                for ij, el in enumerate(delta_for_eqn):
-                                    if np.isclose(el, 0):
-                                        delta_for_eqn[ij] = 0
-                                    else:
-                                        if (f"{self.sm.species[ij]}_free", shift) in active_expt.limiting_shifts:
-                                            s = active_expt.limiting_shifts[f"{self.sm.species[ij]}_free", shift]
-                                            if s.value:
-                                                delta_for_eqn[ij] = delta_for_eqn[ij] / s.value
-                                            else:
-                                                delta_for_eqn[ij] = 1
-
-                                            # self.sm.active_expt_data.limiting_shifts[f'{self.sm.species[i]}_free',shift].value
-
-                                # delta_for_eqn[delta_for_eqn != 0] = 1
-
-                                value = self.vec_to_conc_expression(
-                                    delta_for_eqn, [f"{x}_free" for x in self.sm.species]
+            for i, shift in enumerate(self.fast_ex_list_names):
+                # card per chemical shift column
+                card = ui.card().classes("mb-2")
+                self.specDeltaCards.append(card)
+                with card:
+                    ui.label(f"Fast exchange shift {i + 1} ({shift})").classes("text-sm font-semibold")
+                    with ui.row().classes("items-center"):
+                        inp = ui.input().classes("flex-1").props("clearable")
+                        self.specDeltaInps.append(inp)
+                        # species chips row will be added below the input to allow quick insertion
+                        with ui.row().classes("gap-1 mt-2"):
+                            for text in [f"{x}_free" for x in self.sm.species]:
+                                ui.chip(
+                                    text,
+                                    color="teal",
+                                    on_click=lambda h=text: self._insert_species_into_fast_inp(h),
                                 )
-                                inp.value = value
-                                if value == "":
-                                    en_cb.value = False
-                            # elif default_shift_species is not None:
-                            #     inp.value = f"[{default_shift_species}]"
-                            #     # Build corresponding ChemicalShiftParam widgets immediately.
-                            #     self._handle_spec_delta_blur(i, inp)
+                        # placeholder checkbox to enable the input
+                        en_cb = ui.checkbox("Enabled", value=True)
+                        self.specDeltaCbs.append(en_cb)
+                        inp.bind_enabled_from(en_cb, "value")
+                        # placeholder param block element (initially empty/hidden)
+                        pb = ui.element()
+                        self.fast_ex_chem_shift_blocks.append(pb)
+                        self.fast_ex_chem_shift_map.append({})
+                        # store param dict for later
+                        # self.fast_ex_chem_shift_params.append({'shift': None, 'fixed': False, 'min': None, 'max': None})
+
+                        # bind blur handler to create/update parameter block
+                        # use default args to capture current inp and index
+                        # allow chips/clicks to insert into this input by remembering last focus
+                        inp.on("focus", lambda e, widget=inp: self.set_focus(widget))
+                        inp.on("click", lambda e, widget=inp: self.set_focus(widget))
+                        # handle blur to create/update parameter sub-blocks
+                        inp.on("blur", lambda e, idx=i, widget=inp: self._handle_spec_delta_blur(idx, widget))
+                        # immediate change handler: reparse on every change
+                        inp.on_value_change(lambda e, idx=i, widget=inp: self._handle_spec_delta_blur(idx, widget))
+
+                        # if there is saved delta_to_spec data, populate the input
+                        if (
+                            hasattr(active_expt, "delta_to_spec")
+                            and active_expt.delta_to_spec is not None
+                            and len(active_expt.delta_to_spec) > 0
+                        ):
+                            delta_for_eqn = active_expt.delta_to_spec[i].copy()
+
+                            for ij, el in enumerate(delta_for_eqn):
+                                if np.isclose(el, 0):
+                                    delta_for_eqn[ij] = 0
+                                else:
+                                    if (f"{self.sm.species[ij]}_free", shift) in active_expt.limiting_shifts:
+                                        s = active_expt.limiting_shifts[f"{self.sm.species[ij]}_free", shift]
+                                        if s.value:
+                                            delta_for_eqn[ij] = delta_for_eqn[ij] / s.value
+                                        else:
+                                            delta_for_eqn[ij] = 1
+
+                                        # self.sm.active_expt_data.limiting_shifts[f'{self.sm.species[i]}_free',shift].value
+
+                            # delta_for_eqn[delta_for_eqn != 0] = 1
+
+                            value = self.vec_to_conc_expression(
+                                delta_for_eqn, [f"{x}_free" for x in self.sm.species]
+                            )
+                            inp.value = value
+                            if value == "":
+                                en_cb.value = False
+                        elif default_shift_species is not None:
+                            inp.value = f"[{default_shift_species}]"
+                            # Build corresponding ChemicalShiftParam widgets immediately.
+                            self._handle_spec_delta_blur(i, inp)
 
         # finished generating fast-exchange block
 
@@ -371,6 +371,14 @@ class DataModelPanel(BaseComponent):
                 if not isinstance(cs_obj, ChemicalShiftParam):
                     # create with safe defaults
                     cs_obj = ChemicalShiftParam(species=spec_name, col=col_name, fixed=False)
+                    try:
+                        if hasattr(active_expt, "data") and active_expt.data is not None and col_name in active_expt.data.columns:
+                            first_val = float(active_expt.data[col_name].dropna().iloc[0])
+                            cs_obj.value = round(first_val, 4)
+                            cs_obj._min = round(first_val - 1.0, 4)
+                            cs_obj._max = round(first_val + 1.0, 4)
+                    except Exception:
+                        pass
                     active_expt.limiting_shifts[k] = cs_obj
 
                 # reuse if exists
@@ -463,10 +471,10 @@ class DataModelPanel(BaseComponent):
             target.integ_to_spec = None
         else:
             integ_to_spec = [
-                self.conc_expression_to_vec(input.value, target.columns)
-                if input.enabled
+                self.conc_expression_to_vec(self.spec_integ_inps[spec].value, target.columns)
+                if self.spec_integ_cbs[spec].value
                 else np.zeros(len(target.columns))
-                for input in self.spec_integ_inps.values()
+                for spec in self.sm.species
             ]
             integ_to_spec = np.array(integ_to_spec)
             if integ_to_spec.size == 0 or np.all(np.isclose(integ_to_spec, 0)):
@@ -483,9 +491,9 @@ class DataModelPanel(BaseComponent):
         if hasattr(self, "specDeltaInps") and isinstance(self.specDeltaInps, list) and len(self.specDeltaInps) > 0:
             species_label_list = [f"{s}_free" for s in self.sm.species]
             for idx, input_widget in enumerate(self.specDeltaInps):
+                cb = self.specDeltaCbs[idx]
                 if (
-                    hasattr(input_widget, "enabled")
-                    and input_widget.enabled
+                    cb.value
                     and isinstance(input_widget.value, str)
                     and input_widget.value.strip()
                 ):

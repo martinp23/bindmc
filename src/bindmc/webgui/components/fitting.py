@@ -132,8 +132,6 @@ def _infer_analytical_fast_exchange_config(model, expt_data, expt_dtypes: dict) 
         return {
             "topology": topo_name,
             "complex_indices": complex_indices,
-            "obs_columns": [],  # no NMR shift columns
-            "obs_components": [],
         }
 
     # Pure NMR shift path (existing behaviour).
@@ -146,85 +144,9 @@ def _infer_analytical_fast_exchange_config(model, expt_data, expt_dtypes: dict) 
         if finite.size > 0 and np.any(~np.isclose(finite, 0.0)):
             return None
 
-    component_free_labels = [f"{name}_free" for name in model.component_names]
-    if len(component_free_labels) != 2:
-        return None
-
-    # Build optional hints from existing user mappings when available.
-    shift_species_by_col: dict[str, set[str]] = {}
-    if isinstance(expt_data.limiting_shifts, dict):
-        for (species, col_name), _ in expt_data.limiting_shifts.items():
-            if col_name is None:
-                continue
-            shift_species_by_col.setdefault(str(col_name), set()).add(str(species))
-
-    delta_species_hints: dict[str, set[str]] = {}
-    delta_to_spec = expt_data.delta_to_spec
-    if isinstance(delta_to_spec, np.ndarray) and delta_to_spec.ndim == 2 and delta_to_spec.size > 0:
-        # In this UI flow, delta_to_spec rows are created from fast-exchange observable columns.
-        # For analytical mode all dependent observables are shift observables, so the row order
-        # corresponds to obs_list.
-        n_rows = min(delta_to_spec.shape[0], len(obs_list))
-        n_species = min(delta_to_spec.shape[1], len(component_free_labels))
-        for ridx in range(n_rows):
-            col_name = obs_list[ridx]
-            for sidx in range(n_species):
-                try:
-                    is_nonzero = not np.isclose(float(delta_to_spec[ridx, sidx]), 0.0)
-                except Exception:
-                    is_nonzero = bool(delta_to_spec[ridx, sidx])
-                if is_nonzero:
-                    delta_species_hints.setdefault(col_name, set()).add(component_free_labels[sidx])
-
-    def _component_from_text_hints(col_name: str, dtype_key: str | None) -> int | None:
-        # Tokenize to avoid over-matching short component names in arbitrary strings.
-        tokens = []
-        for src in (col_name, dtype_key or ""):
-            parts = [t for t in re.split(r"[^A-Za-z0-9]+", str(src).lower()) if t]
-            tokens.extend(parts)
-        matches = [idx for idx, comp in enumerate(model.component_names) if str(comp).lower() in tokens]
-        return matches[0] if len(matches) == 1 else None
-
-    obs_components: list[int] = []
-    unresolved: list[tuple[int, str]] = []
-    for obs_idx, col in enumerate(obs_list):
-        col_meta = expt_data.col_details.get(col, {})
-        dtype_key = col_meta.get("dtype")
-
-        included_species = set()
-        included_species |= shift_species_by_col.get(col, set())
-        included_species |= delta_species_hints.get(col, set())
-
-        has_comp0 = component_free_labels[0] in included_species
-        has_comp1 = component_free_labels[1] in included_species
-        if has_comp0 != has_comp1:
-            obs_components.append(0 if has_comp0 else 1)
-            continue
-
-        inferred = _component_from_text_hints(col, dtype_key)
-        if inferred is not None:
-            obs_components.append(inferred)
-            continue
-
-        unresolved.append((obs_idx, col))
-        obs_components.append(-1)
-
-    # Final fallback keeps analytical mode enabled even without manual shift metadata.
-    if unresolved:
-        for obs_idx, col in unresolved:
-            fallback = obs_idx % len(component_free_labels)
-            obs_components[obs_idx] = fallback
-            logger.info(
-                "Analytical fast-exchange: inferred observable '%s' as component %d by default fallback.",
-                col,
-                fallback,
-            )
-
     return {
         "topology": topo_name,
         "complex_indices": complex_indices,
-        "obs_columns": list(obs_list),
-        "obs_components": obs_components,
     }
 
 
@@ -237,9 +159,9 @@ class FittingPanel(BaseComponent):
             ui.label("Fitting panel").classes("text-lg font-bold mb-4")
             with ui.row().classes("w-full gap-4 items-start flex-col lg:flex-row"):
                 with ui.card().classes("w-full lg:w-80 shrink-0"):
-                    ui.label("Fitting options to go here.")
+                    # ui.label("Fitting options to go here.")
                     self.fit_alg_select = ui.select(
-                        ["least_squares", "l-bfgs", "ampgo"],
+                        ["least_squares", "l-bfgs", "l-bfgs-b", "nelder-mead", "ampgo"],
                         label="Algorithm",
                         on_change=lambda e: print(f"Selected: {e.value}"),
                         value="least_squares",
@@ -494,8 +416,6 @@ class FittingPanel(BaseComponent):
                 bd_model=self.m1,
                 analytical_fast_exchange=self.m1.analytical_fast_exchange,
                 analytical_topology=self.m1.analytical_topology,
-                analytical_obs_columns=[str(x) for x in self.m1.analytical_obs_columns],
-                analytical_obs_components=[int(x) for x in self.m1.analytical_obs_components],
                 analytical_complex_indices=self.m1.analytical_complex_indices,
             )
             self.sm.add_fit(new_fit)
@@ -509,6 +429,11 @@ class FittingPanel(BaseComponent):
                     "vary": v.vary,
                     "initial_value": v.init_value,
                 }
+
+            print("DEBUG: specToInteg =", self.sm.active_expt_data.integ_to_spec)
+            print("DEBUG: specToDd =", self.sm.active_expt_data.delta_to_spec)
+            print("DEBUG: obsList =", self.m1.obsList)
+            print("DEBUG: calc_obs shape =", np.shape(calc_obs))
 
             self.sm.active_fit.calc_obs = pd.DataFrame(calc_obs, columns=self.m1.obsList)
 

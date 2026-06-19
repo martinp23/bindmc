@@ -1167,6 +1167,9 @@ class StateManager:
         fittemp = data.get("fits", [])  # List of fits
         if fittemp:
             for fit in fittemp:
+                # backward compatibility to load pre-0.1.7 fits
+                fit.pop("analytical_obs_columns",None)
+                fit.pop("analytical_obs_components",None)
                 fit_result = FitResult(**fit)
                 fit_result.fit_speciation = pd.DataFrame(fit.get("fit_speciation", {}))
                 fit_result.calc_obs = pd.DataFrame(fit.get("calc_obs", {}))
@@ -1233,7 +1236,7 @@ class StateManager:
                                 parameter.vary = bool(cell.get("vary", True))
                                 reconstructed_row.append(parameter)
                             elif cell is None:
-                                reconstructed_row.append(0.0)
+                                reconstructed_row.append(None)
                             elif isinstance(cell, (str, int, float)):
                                 try:
                                     reconstructed_row.append(float(cell))
@@ -1736,16 +1739,12 @@ bd.makeFitResidPlot(fit,plotMask=(0,1),ylabel='Chemical shift (ppm)')"""
             cfg = {
                 "topology": fit.analytical_topology,
                 "complex_indices": list(getattr(fit, "analytical_complex_indices", [])),
-                "obs_columns": list(getattr(fit, "analytical_obs_columns", [])),
-                "obs_components": list(getattr(fit, "analytical_obs_components", [])),
             }
 
         if cfg is not None:
             model.analytical_fast_exchange = True
             model.analytical_topology = str(cfg["topology"])
             model.analytical_complex_indices = [int(x) for x in cfg["complex_indices"]]  # type: ignore[index]
-            model.analytical_obs_columns = [str(x) for x in cfg["obs_columns"]]  # type: ignore[index]
-            model.analytical_obs_components = [int(x) for x in cfg["obs_components"]]  # type: ignore[index]
             logger.info(
                 "Using analytical fast-exchange backend (%s model) for fitting.",
                 model.analytical_topology,
