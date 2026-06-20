@@ -292,19 +292,27 @@ class DataModelPanel(BaseComponent):
                             delta_for_eqn = active_expt.delta_to_spec[i].copy()
 
                             for ij, el in enumerate(delta_for_eqn):
-                                if np.isclose(el, 0):
+                                val = 0.0
+                                if el is not None:
+                                    if hasattr(el, "value"):
+                                        val = el.value
+                                    else:
+                                        try:
+                                            val = float(el)
+                                        except (TypeError, ValueError):
+                                            val = 0.0
+
+                                if np.isclose(val, 0):
                                     delta_for_eqn[ij] = 0
                                 else:
                                     if (f"{self.sm.species[ij]}_free", shift) in active_expt.limiting_shifts:
                                         s = active_expt.limiting_shifts[f"{self.sm.species[ij]}_free", shift]
                                         if s.value:
-                                            delta_for_eqn[ij] = delta_for_eqn[ij] / s.value
+                                            delta_for_eqn[ij] = val / s.value
                                         else:
-                                            delta_for_eqn[ij] = 1
-
-                                        # self.sm.active_expt_data.limiting_shifts[f'{self.sm.species[i]}_free',shift].value
-
-                            # delta_for_eqn[delta_for_eqn != 0] = 1
+                                            delta_for_eqn[ij] = 1.0
+                                    else:
+                                        delta_for_eqn[ij] = val
 
                             value = self.vec_to_conc_expression(
                                 delta_for_eqn, [f"{x}_free" for x in self.sm.species]
