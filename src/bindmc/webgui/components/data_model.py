@@ -348,6 +348,7 @@ class DataModelPanel(BaseComponent):
             curr_block = self.fast_ex_chem_shift_blocks[fast_ex_idx]
             curr_block.clear()
             curr_block.visible = False
+            self.fast_ex_chem_shift_map[fast_ex_idx].clear()
             # reset stored params
             if len(self.fast_ex_chem_shift_params) > 0:
                 del self.fast_ex_chem_shift_params[fast_ex_idx]
@@ -609,8 +610,12 @@ class DataModelPanel(BaseComponent):
     def insert_term(self, h: str | ClickEventArguments) -> None:
         if not isinstance(h, str):
             raise ValueError("Species name from chip is not a str")
-        if hasattr(self, "last_focus") and self.last_focus is not None and self.last_focus.value is not None:
-            self.last_focus.value += f"+{h}"
+        if hasattr(self, "last_focus") and self.last_focus is not None:
+            val = self.last_focus.value
+            if not val:
+                self.last_focus.value = h
+            else:
+                self.last_focus.value = val + f"+{h}"
             # if the focused widget is a fast-exchange input, trigger its handler to regenerate param blocks
 
             if hasattr(self, "specDeltaInps") and self.last_focus in self.specDeltaInps:
@@ -629,9 +634,12 @@ class DataModelPanel(BaseComponent):
             return
         # only insert into fast-exchange inputs
         if hasattr(self, "specDeltaInps") and self.last_focus in self.specDeltaInps:
-            # insert as +[Species]
-            self.last_focus.value = "" if self.last_focus.value is None else self.last_focus.value
-            self.last_focus.value += "+[" + species_name + "]"
+            val = self.last_focus.value
+            term = f"[{species_name}]"
+            if not val:
+                self.last_focus.value = term
+            else:
+                self.last_focus.value = val + f"+{term}"
 
             idx = self.specDeltaInps.index(self.last_focus)
             self._handle_spec_delta_blur(idx, self.last_focus)
