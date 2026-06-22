@@ -6,6 +6,7 @@ from nicegui.events import ClickEventArguments
 import numpy as np
 
 from .base import BaseComponent
+from .dataset_selector import DatasetSelector
 from ..classes import ChemicalShiftParam, ExptData
 from ..utils import _infer_simple_fast_exchange_topology
 
@@ -33,11 +34,7 @@ class DataModelPanel(BaseComponent):
         self.container = ui.column().classes("w-full")
 
         with self.container:
-            ui.label("Data model setup panel").classes("text-lg font-bold mb-4")
-
-            self.data_model_inp = (
-                ui.input("Data model name", placeholder="Enter data model name").classes("mb-5").props("clearable")
-            )
+            self.selector = DatasetSelector(self.sm)
 
             ui.label("Columns").classes("text-md font-semibold mt-4 mb-2")
             self.dataModel_col_block = ui.element()
@@ -55,12 +52,11 @@ class DataModelPanel(BaseComponent):
             if len(self.sm.expt_datas) > 0:
                 self._populate_blocks()
 
-    def setup_bindings(self):
-        super().setup_bindings()
         self.sm.add_listener("data_imported", self._populate_blocks)
+        self.sm.add_listener("active_context_changed", self._populate_blocks)
         return
 
-    def _populate_blocks(self):
+    def _populate_blocks(self, e=None):
         # add column chips to data model page
 
         nmr_fast_ex = False
@@ -91,8 +87,8 @@ class DataModelPanel(BaseComponent):
             self.slow_ex_label.visible = False
             self.dataModel_specInteg_block.visible = False
 
-        if self.sm.active_expt_data_or_none is not None:
-            self.data_model_inp.value = self.sm.active_expt_data.name[:]  # copy it
+        # Name input field is removed
+        pass
 
     def _gen_column_chips(self):
         """Generate the column chips for the data model."""
@@ -260,7 +256,7 @@ class DataModelPanel(BaseComponent):
                                 ui.chip(
                                     text,
                                     color="teal",
-                                    on_click=lambda h=text: self._insert_species_into_fast_inp(h),
+                                    on_click=lambda h=text, widget=inp: self._insert_species_into_fast_inp(h, widget=widget),
                                 )
                         # placeholder checkbox to enable the input
                         en_cb = ui.checkbox("Enabled", value=True)
@@ -305,7 +301,7 @@ class DataModelPanel(BaseComponent):
                                 if np.isclose(val, 0):
                                     delta_for_eqn[ij] = 0
                                 else:
-                                    if (f"{self.sm.species[ij]}_free", shift) in active_expt.limiting_shifts:
+                                    if ij < len(self.sm.species) and (f"{self.sm.species[ij]}_free", shift) in active_expt.limiting_shifts:
                                         s = active_expt.limiting_shifts[f"{self.sm.species[ij]}_free", shift]
                                         if s.value:
                                             delta_for_eqn[ij] = val / s.value
@@ -348,6 +344,7 @@ class DataModelPanel(BaseComponent):
             curr_block = self.fast_ex_chem_shift_blocks[fast_ex_idx]
             curr_block.clear()
             curr_block.visible = False
+            self.fast_ex_chem_shift_map[fast_ex_idx].clear()
             # reset stored params
             if len(self.fast_ex_chem_shift_params) > 0:
                 del self.fast_ex_chem_shift_params[fast_ex_idx]
@@ -423,21 +420,7 @@ class DataModelPanel(BaseComponent):
                 w["min_num"].bind_enabled_from(cs_obj, "fixed", backward=lambda v: not v)
                 w["max_num"].bind_enabled_from(cs_obj, "fixed", backward=lambda v: not v)
 
-    def _clone_expt_data(self, old_expt: ExptData, new_name: str) -> ExptData:
-        """Return a copy of old_expt with a new UUID and name, linked to the same model and raw data."""
-        d = old_expt.to_dict()
-        d["id"] = str(uuid.uuid4())
-        d["name"] = new_name
-        limiting_shifts_raw = d.pop("limiting_shifts", []) or []
-        new_expt = ExptData(**d)
-        new_expt.limiting_shifts = {}
-        for cs in limiting_shifts_raw:
-            csp = ChemicalShiftParam(**cs)
-            key = (csp.species, csp.col)
-            new_expt.limiting_shifts[key] = csp
-        new_expt.find_and_link_model(self.sm.models)
-        new_expt.find_and_link_raw_data(self.sm.raw_datas)
-        return new_expt
+
 
     async def process_data_model(self):
         """Process the data model based on user input."""
@@ -448,7 +431,6 @@ class DataModelPanel(BaseComponent):
 
         # If existing fits depend on this ExptData, require saving as a new one
         dependent_fits = [f for f in self.sm.fits.values() if f.expt_data_id == active_expt.id]
-        new_name = self.data_model_inp.value  # default; overridden by dialog when cloning
         if dependent_fits:
             with ui.dialog() as dialog, ui.card().classes("w-96"):
                 ui.label("Existing fits depend on this data model.").classes("font-semibold")
@@ -462,8 +444,9 @@ class DataModelPanel(BaseComponent):
                 ui.notify("Cancelled — data model unchanged.", type="info")
                 return
             new_name = result
-            target = self._clone_expt_data(active_expt, new_name)
+            target = self.selector._clone_expt_data(active_expt, new_name)
         else:
+            new_name = active_expt.name
             target = active_expt
 
         # make col_to_comp matrix
@@ -561,6 +544,8 @@ class DataModelPanel(BaseComponent):
             self.sm.active_fit_id = None  # deselect any auto-selected fit
             self.sm.notify_listeners("fit_changed")
             self.sm.notify_listeners("fits_loaded")
+            self.sm.notify_listeners("active_context_changed")
+            self.sm.notify_listeners("data_imported")
         self.sm.save_to_storage()
         self.sm.notify_listeners("data_model_processed")
 
@@ -595,6 +580,8 @@ class DataModelPanel(BaseComponent):
         "+[[H]]+2[[G]]" or similar."""
         terms = []
         for i, v in enumerate(vec):
+            if i >= len(cols):
+                continue
             if v == "-1":
                 terms.append(f"-[{cols[i]}]")
             elif v == 1:
@@ -609,8 +596,12 @@ class DataModelPanel(BaseComponent):
     def insert_term(self, h: str | ClickEventArguments) -> None:
         if not isinstance(h, str):
             raise ValueError("Species name from chip is not a str")
-        if hasattr(self, "last_focus") and self.last_focus is not None and self.last_focus.value is not None:
-            self.last_focus.value += f"+{h}"
+        if hasattr(self, "last_focus") and self.last_focus is not None:
+            val = self.last_focus.value
+            if not val:
+                self.last_focus.value = h
+            else:
+                self.last_focus.value = val + f"+{h}"
             # if the focused widget is a fast-exchange input, trigger its handler to regenerate param blocks
 
             if hasattr(self, "specDeltaInps") and self.last_focus in self.specDeltaInps:
@@ -618,20 +609,26 @@ class DataModelPanel(BaseComponent):
                 # call handler (simulate a change/blur)
                 self._handle_spec_delta_blur(idx, self.last_focus)
 
-    def _insert_species_into_fast_inp(self, species_name: str | ClickEventArguments) -> None:
-        """Insert a species chip term into the currently focused fast-exchange input only.
+    def _insert_species_into_fast_inp(self, species_name: str | ClickEventArguments, widget=None) -> None:
+        """Insert a species chip term into the specified or currently focused fast-exchange input.
 
         The inserted token matches the concentration expression token format: `[Species]`.
         """
         if not isinstance(species_name, str):
             raise ValueError("Species name from chip is not a str")
-        if not hasattr(self, "last_focus") or self.last_focus is None:
+        target_widget = widget if widget is not None else getattr(self, "last_focus", None)
+        if target_widget is None:
             return
         # only insert into fast-exchange inputs
-        if hasattr(self, "specDeltaInps") and self.last_focus in self.specDeltaInps:
-            # insert as +[Species]
-            self.last_focus.value = "" if self.last_focus.value is None else self.last_focus.value
-            self.last_focus.value += "+[" + species_name + "]"
+        if hasattr(self, "specDeltaInps") and target_widget in self.specDeltaInps:
+            val = target_widget.value
+            term = f"[{species_name}]"
+            if not val:
+                target_widget.value = term
+            else:
+                target_widget.value = val + f"+{term}"
 
-            idx = self.specDeltaInps.index(self.last_focus)
-            self._handle_spec_delta_blur(idx, self.last_focus)
+            idx = self.specDeltaInps.index(target_widget)
+            self._handle_spec_delta_blur(idx, target_widget)
+
+

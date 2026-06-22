@@ -381,6 +381,18 @@ class StateManager:
                 del self.expt_datas[obj.id]
                 if self._active_expt_data_id == obj.id:
                     self._active_expt_data_id = None
+                
+                # Check if this was the last exptdata associated with its rawdata
+                raw_data = self.raw_datas.get(obj.raw_data_id)
+                if raw_data is not None:
+                    remaining_expts = [expt for expt in self.expt_datas.values() if expt.raw_data_id == raw_data.id]
+                    if len(remaining_expts) == 0:
+                        try:
+                            model = self.active_model
+                        except IndexError:
+                            model = None
+                        new_expt = ExptData(name=raw_data.filename, init_raw_data=raw_data, init_model=model)
+                        self.add_expt_data(new_expt, emit_events=False)
         elif isinstance(obj, RawData):
             if obj.id in self.raw_datas:
                 del self.raw_datas[obj.id]
