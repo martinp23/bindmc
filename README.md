@@ -15,6 +15,16 @@ Download the latest executable for your platform from the [Releases](https://git
 pip install bindmc
 ```
 
+## Upgrades
+
+### Pre-built Binary
+Re-download from the link above. 
+
+### Pip
+```bash
+pip install --upgrade bindmc
+```
+
 ## Usage
 
 If using the pre-built binary, run the downloaded executable.

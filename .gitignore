@@ -9,4 +9,3 @@ build-venv/*
 dist/*
 build/*
 .micromamba/*
-uv.lock
