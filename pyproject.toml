@@ -27,7 +27,7 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "arviz==0.21.0",
+    "arviz==1.2.0",
     "bindtools>=0.2.2",
     "corner==2.2.3",
     "emcee==3.1.6",
