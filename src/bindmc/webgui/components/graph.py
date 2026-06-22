@@ -210,8 +210,9 @@ class Graph(BaseComponent):
             raise ValueError("run_id cannot be None")
             # run_id = str(uuid.uuid4())
 
-        self.data_frames[str(run_id)] = (x, y)  # Store the original x and y data for later use
-        self.line_styles[str(run_id)] = scatter
+        df_key = f"{run_id}-{scatter}"
+        self.data_frames[df_key] = (x, y)  # Store the original x and y data for later use
+        self.line_styles[df_key] = scatter
 
         for ii, col in enumerate(x.columns):
             self.add_comp_name(col)
@@ -227,6 +228,7 @@ class Graph(BaseComponent):
                 "trace_id": str(run_id)  # is the uuid for the fit/etc
                 + "-"
                 + col,  # Unique trace ID for this simulation
+                "df_key": df_key,
                 "visible": True,
                 #'legendgroup': self.sm.modelName,
                 #'legendgrouptitle': dict(text=self.sm.modelName)
@@ -271,8 +273,9 @@ class Graph(BaseComponent):
         # y DataFrame includes species concentrations
         y_df = df[spec_cols] if spec_cols else pd.DataFrame()
 
-        self.data_frames[str(run_id)] = (x_df, y_df)
-        self.line_styles[str(run_id)] = scatter
+        df_key = f"{run_id}-{scatter}"
+        self.data_frames[df_key] = (x_df, y_df)
+        self.line_styles[df_key] = scatter
 
         for ii, col in enumerate(df.columns):
             if col.endswith("_tot"):
@@ -289,7 +292,8 @@ class Graph(BaseComponent):
                     "y": df[col].tolist(),
                     "name": run_name[:GRAPH_LEGEND_TITLE_W] + " " + col,
                     "species": col,
-                    "trace_id": run_id + "-" + col,  # Unique trace ID for this simulation
+                    "trace_id": str(run_id) + "-" + col,  # Unique trace ID for this simulation
+                    "df_key": df_key,
                     "visible": True,
                     #'legendgroup': self.sm.modelName,
                     #'legendgrouptitle': dict(text=self.sm.modelName)
@@ -317,7 +321,8 @@ class Graph(BaseComponent):
                     "y": df[col].tolist(),
                     "name": run_name[:GRAPH_LEGEND_TITLE_W] + " " + col,
                     "species": col,
-                    "trace_id": run_id + "-" + col,  # Unique trace ID for this simulation
+                    "trace_id": str(run_id) + "-" + col,  # Unique trace ID for this simulation
+                    "df_key": df_key,
                     "visible": True,
                     #'legendgroup': self.sm.modelName,
                     #'legendgrouptitle': dict(text=self.sm.modelName)
@@ -485,11 +490,15 @@ if (!plot || typeof Plotly === 'undefined') {{
 
         throw_warning = False
         for d in self.graph_data["data"]:
-            run_id = "-".join(d["trace_id"].split("-", 5)[0:5])  # Get the simulation ID from the trace_id
-            if run_id not in self.data_frames.keys():
-                ui.notify("Data not found for trace ID: " + run_id, type="warning")
+            df_key = d.get("df_key")
+            if df_key is None:
+                run_id = "-".join(d["trace_id"].split("-", 5)[0:5])
+                df_key = run_id
+
+            if df_key not in self.data_frames:
+                ui.notify("Data not found for trace: " + d.get("name", ""), type="warning")
                 continue
-            x_df = self.data_frames[run_id][0]
+            x_df = self.data_frames[df_key][0]
             x_cols = x_df.columns
 
             if numName == X_AXIS_ROW_INDEX:
@@ -497,22 +506,22 @@ if (!plot || typeof Plotly === 'undefined') {{
                 continue
             if numName not in x_cols:
                 ui.notify(
-                    f"Numerator '{numName}' not found in simulation data for trace ID: {run_id}",
+                    f"Numerator '{numName}' not found in simulation data for trace: {d.get('name', '')}",
                     type="warning",
                 )
                 continue
 
             if deNomName != 1 and deNomName not in x_cols:
                 ui.notify(
-                    f"Denomination '{deNomName}' not found in simulation data for trace ID: {run_id}",
+                    f"Denomination '{deNomName}' not found in simulation data for trace: {d.get('name', '')}",
                     type="warning",
                 )
                 continue
 
             if deNomName == 1 or deNomName is None:
-                d["x"] = self.data_frames[run_id][0][numName].tolist()
+                d["x"] = self.data_frames[df_key][0][numName].tolist()
             else:
-                d["x"] = (self.data_frames[run_id][0][numName] / self.data_frames[run_id][0][deNomName]).tolist()
+                d["x"] = (self.data_frames[df_key][0][numName] / self.data_frames[df_key][0][deNomName]).tolist()
 
         self.graph_data.setdefault("layout", {})
         self.graph_data["layout"].setdefault("xaxis", {})
@@ -554,12 +563,16 @@ if (!plot || typeof Plotly === 'undefined') {{
         normalize = hasattr(self, "chkNormalizeY") and bool(self.chkNormalizeY.value)
 
         for d in self.graph_data["data"]:
-            trace_id = d.get("trace_id", "")
-            run_id = "-".join(trace_id.split("-", 5)[0:5])
-            if run_id not in self.data_frames:
+            df_key = d.get("df_key")
+            if df_key is None:
+                trace_id = d.get("trace_id", "")
+                run_id = "-".join(trace_id.split("-", 5)[0:5])
+                df_key = run_id
+
+            if df_key not in self.data_frames:
                 continue
 
-            x_df, y_df = self.data_frames[run_id]
+            x_df, y_df = self.data_frames[df_key]
             species = d.get("species")
             y_values = None
             if species in y_df.columns:
@@ -660,10 +673,14 @@ if (!plot || typeof Plotly === 'undefined') {{
             run_id = str(run_id.id)
 
         """Remove data for a specific run_id from the graph."""
-        if run_id in self.data_frames:
-            del self.data_frames[run_id]
-        if run_id in self.line_styles:
-            del self.line_styles[run_id]
+        # Delete matching keys from data_frames and line_styles
+        keys_to_delete = [k for k in self.data_frames if k.startswith(run_id)]
+        for k in keys_to_delete:
+            del self.data_frames[k]
+
+        line_style_keys_to_delete = [k for k in self.line_styles if k.startswith(run_id)]
+        for k in line_style_keys_to_delete:
+            del self.line_styles[k]
 
         # Remove traces from the graph data
         self.graph_data["data"] = [d for d in self.graph_data["data"] if not d["trace_id"].startswith(run_id)]

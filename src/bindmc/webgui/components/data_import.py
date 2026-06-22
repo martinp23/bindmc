@@ -7,6 +7,7 @@ from nicegui.events import UploadEventArguments, ClickEventArguments
 
 from .base import BaseComponent
 from .graph import Graph
+from .dataset_selector import DatasetSelector
 from ..classes import ExptData, RawData, ExptDataType
 
 
@@ -19,6 +20,7 @@ class DataImportPanel(BaseComponent):
 
         self.dtype_labels = []
         self.dtype_dropdowns = []
+        self._restore_point = self._backup_expt(self.sm.active_expt_data_or_none)
 
     def setup_nicegui(self):
         self.container = ui.column().classes("w-full")
@@ -30,22 +32,7 @@ class DataImportPanel(BaseComponent):
             # - wide screens: show cards side-by-side (controls left, table/graph right)
             with ui.row().classes("w-full gap-4 items-start flex-col lg:flex-row"):
                 with ui.card().classes("w-full lg:flex-1 min-w-0"):
-                    active_expt = self.sm.active_expt_data_or_none
-                    if active_expt is not None:
-                        self.expt_data_dropdown_button = (
-                            ui.dropdown_button("Choose dataset", auto_close=True)
-                            .bind_text(active_expt, "name")
-                            .classes("mb-5")
-                        )
-                    else:
-                        self.expt_data_dropdown_button = ui.dropdown_button("No active model", auto_close=True).classes(
-                            "mb-5"
-                        )
-
-                    if len(self.sm.raw_datas) > 0:
-                        self.generate_data_dropdown()
-                    else:
-                        self.expt_data_dropdown_button.visible = False
+                    self.selector = DatasetSelector(self.sm)
 
                     ui.label("Upload Data File (CSV or Excel)")
                     ui.button("Upload File", on_click=self.load_exptdata)
@@ -94,41 +81,218 @@ class DataImportPanel(BaseComponent):
     def setup_bindings(self):
         super().setup_bindings()
         self.sm.add_listener("data_imported", self._load_data_to_table)
-        self.sm.add_listener("data_imported", self.generate_data_dropdown)
         self.sm.add_listener("active_context_changed", self._load_data_to_table)
-        self.sm.add_listener("active_context_changed", self.generate_data_dropdown)
         self.sm.add_listener(
             "expt_data_columns_changed", self._load_data_to_table
         )  # Update when column selection changes
+
+    def _backup_expt(self, old_expt: ExptData) -> ExptData:
+        """Return a copy of old_expt with the SAME UUID and name (a true backup)."""
+        if old_expt is None:
+            return None
+        import uuid
+        from dataclasses import asdict
+        from ..classes import ChemicalShiftParam
+        d = old_expt.to_dict()
+        limiting_shifts_raw = d.pop("limiting_shifts", []) or []
+        new_expt = ExptData(**d)
+        new_expt.limiting_shifts = {}
+        for cs in limiting_shifts_raw:
+            csp = ChemicalShiftParam(**cs)
+            key = (csp.species, csp.col)
+            new_expt.limiting_shifts[key] = csp
+        new_expt.find_and_link_model(self.sm.models)
+        new_expt.find_and_link_raw_data(self.sm.raw_datas)
+        return new_expt
+
+
 
     def prepare_data_model(self, e: ClickEventArguments):
         active_raw = self.sm.active_raw_data_or_none
         active_expt = self.sm.active_expt_data_or_none
         if self.sm.active_raw_data_id is not None and active_raw is not None:
             if active_expt is not None and active_expt.raw_data_id == active_raw.id:
-                # Auto-deselect unassigned columns
+                # Check if selected columns or details have changed from the restore point
+                has_changes = False
+                if hasattr(self, "_restore_point") and self._restore_point is not None:
+                    if set(active_expt.selected_columns) != set(self._restore_point.selected_columns):
+                        has_changes = True
+                    else:
+                        for col in active_expt.selected_columns:
+                            old_det = self._restore_point.col_details.get(col, {})
+                            new_det = active_expt.col_details.get(col, {})
+                            if old_det.get("depindep") != new_det.get("depindep") or old_det.get("dtype") != new_det.get("dtype"):
+                                has_changes = True
+                                break
+                
+                # Check if there are changes in the unassigned auto-deselect columns too
                 for col in active_expt.data.columns:
                     col_details = active_expt.col_details.get(col, {})
                     is_component = col.startswith("[") and col.endswith("]")
                     has_assignment = (col_details.get("depindep") in ["dep", "indep"]) and (
                         col_details.get("dtype") is not None
                     )
-
                     if not is_component and not has_assignment:
-                        # Remove from selected columns instead of marking as ignored
                         if col in active_expt.selected_columns:
-                            active_expt.selected_columns.remove(col)
+                            has_changes = True
 
-                self._load_expt_data_col_details()  # Refresh UI to show changes
-                self._load_data_to_table()  # Refresh table and graph to show selected data
-                ui.notify("Data model prepared. Unassigned columns have been deselected.", type="positive")
+                if has_changes:
+                    # Detect if there is existing work associated with this ExptData
+                    has_model_work = False
+                    if (
+                        (active_expt.limiting_shifts and len(active_expt.limiting_shifts) > 0)
+                        or (active_expt.delta_to_spec is not None and active_expt.delta_to_spec.size > 0)
+                        or (active_expt.integ_to_spec is not None and active_expt.integ_to_spec.size > 0)
+                    ):
+                        has_model_work = True
+                    
+                    has_fits = any(fit.expt_data_id == active_expt.id for fit in self.sm.fits.values())
+                    has_mcmc = any(mcmc.expt_data_id == active_expt.id for mcmc in self.sm.mcmcs.values())
+                    
+                    if has_model_work or has_fits or has_mcmc:
+                        # Existing work exists, prompt user to Overwrite or Rename
+                        self.prompt_overwrite_or_rename(active_expt, has_fits, has_mcmc, has_model_work)
+                    else:
+                        # No existing work to lose, perform direct overwrite in-place
+                        self.prepare_data_model_overwrite(active_expt, delete_dependents=False)
+                else:
+                    self._load_expt_data_col_details()
+                    self._load_data_to_table()
+                    ui.notify("Data model prepared.", type="positive")
             else:
                 rd = active_raw
                 new_expt_data = ExptData(name=rd.filename, init_raw_data=rd, init_model=self.sm.active_model)
                 self.sm.add_expt_data(new_expt_data)
-            self.sm.notify_listeners("data_imported")  # Trigger table and graph update
+                self._restore_point = self._backup_expt(new_expt_data)
+            self.sm.notify_listeners("data_imported")
         else:
             ui.notify("No raw data selected to prepare data model from.", type="negative")
+
+    def prompt_overwrite_or_rename(self, active_expt, has_fits, has_mcmc, has_model_work):
+        with ui.dialog() as dialog, ui.card().classes("p-4"):
+            ui.label("Existing Work Detected").classes("text-lg font-bold")
+            
+            msg = f"The active data model '{active_expt.name}' has existing work associated with it"
+            reasons = []
+            if has_model_work:
+                reasons.append("data model configuration")
+            if has_fits:
+                reasons.append("dependent fit results")
+            if has_mcmc:
+                reasons.append("MCMC simulation results")
+            msg += " (" + ", ".join(reasons) + ")."
+            
+            ui.label(msg).classes("text-sm text-gray-700 mb-2")
+            
+            if has_fits or has_mcmc:
+                ui.label(
+                    "WARNING: Overwriting this data model will PERMANENTLY delete all dependent fits and MCMC simulations."
+                ).classes("text-sm text-red-600 font-semibold mb-4")
+            
+            with ui.row().classes("justify-end gap-2 w-full"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                
+                # Rename / Create New button
+                def on_rename():
+                    dialog.close()
+                    self.prepare_data_model_rename(active_expt)
+                ui.button("Rename (Create New)", on_click=on_rename).props("outline color=primary")
+                
+                # Overwrite button
+                def on_overwrite():
+                    dialog.close()
+                    self.prepare_data_model_overwrite(active_expt, delete_dependents=True)
+                ui.button("Overwrite", on_click=on_overwrite).props("unelevated color=negative")
+
+    def prepare_data_model_overwrite(self, active_expt, delete_dependents=True):
+        # Auto-deselect unassigned columns in place
+        for col in active_expt.data.columns:
+            col_details = active_expt.col_details.get(col, {})
+            is_component = col.startswith("[") and col.endswith("]")
+            has_assignment = (col_details.get("depindep") in ["dep", "indep"]) and (
+                col_details.get("dtype") is not None
+            )
+            if not is_component and not has_assignment:
+                if col in active_expt.selected_columns:
+                    active_expt.selected_columns.remove(col)
+
+        # In-place reconciliation
+        active_expt.reconcile_matrices()
+
+        if delete_dependents:
+            # Delete dependent fits & mcmcs
+            to_delete = []
+            for fit in list(self.sm.fits.values()):
+                if fit.expt_data_id == active_expt.id:
+                    to_delete.append(fit)
+            for mcmc in list(self.sm.mcmcs.values()):
+                if mcmc.expt_data_id == active_expt.id:
+                    to_delete.append(mcmc)
+            
+            for obj in to_delete:
+                self.sm.delete_object(obj)
+
+        # Update restore point to current reconciled state
+        self._restore_point = self._backup_expt(active_expt)
+        
+        self._load_expt_data_col_details()
+        self._load_data_to_table()
+        ui.notify(f"Data model '{active_expt.name}' updated and reconciled.", type="positive")
+
+    def prepare_data_model_rename(self, active_expt):
+        import numpy as np
+        from dataclasses import asdict
+        from ..classes import ChemicalShiftParam
+
+        # 1. Clone the current mutated active_expt to create a new version
+        existing_names = [ed.name for ed in self.sm.expt_datas.values()]
+        new_name = self.selector.get_next_version_name(self._restore_point.name, existing_names)
+        target = self.selector._clone_expt_data(active_expt, new_name)
+        
+        # 2. Seed target's old matrix column associations from the restore point
+        target._matrix_columns = list(self._restore_point.selected_columns)
+        if self._restore_point.integ_to_spec is not None:
+            target._matrix_integ_columns = list(self._restore_point.selected_columns)
+        
+        fast_ex_cols = []
+        if self._restore_point.col_details:
+            for name, col in self._restore_point.col_details.items():
+                if col.get("dtype") is None:
+                    continue
+                dtype_key = str(col.get("dtype", "")).lower()
+                if col.get("depindep") == "dep" and ("delta" in dtype_key or "ppm" in dtype_key or "shift" in dtype_key):
+                    fast_ex_cols.append(name)
+        target._matrix_fast_ex_columns = fast_ex_cols
+
+        # Auto-deselect unassigned columns in place on the clone
+        for col in target.data.columns:
+            col_details = target.col_details.get(col, {})
+            is_component = col.startswith("[") and col.endswith("]")
+            has_assignment = (col_details.get("depindep") in ["dep", "indep"]) and (
+                col_details.get("dtype") is not None
+            )
+            if not is_component and not has_assignment:
+                if col in target.selected_columns:
+                    target.selected_columns.remove(col)
+
+        # 3. Reconcile the new clone
+        target.reconcile_matrices()
+        
+        # 4. Restore the original active_expt back to the restore point
+        active_expt.selected_columns = list(self._restore_point.selected_columns)
+        active_expt.col_details = {k: dict(v) for k, v in self._restore_point.col_details.items()}
+        active_expt.col_to_comp = np.copy(self._restore_point.col_to_comp) if isinstance(self._restore_point.col_to_comp, np.ndarray) else self._restore_point.col_to_comp
+        active_expt.integ_to_spec = np.copy(self._restore_point.integ_to_spec) if isinstance(self._restore_point.integ_to_spec, np.ndarray) else self._restore_point.integ_to_spec
+        active_expt.delta_to_spec = np.copy(self._restore_point.delta_to_spec) if isinstance(self._restore_point.delta_to_spec, np.ndarray) else self._restore_point.delta_to_spec
+        active_expt.limiting_shifts = {k: ChemicalShiftParam(**asdict(v)) for k, v in self._restore_point.limiting_shifts.items()}
+        
+        # 5. Add the clone to StateManager (becomes active, reconciles active ID, notify context changed)
+        self.sm.add_expt_data(target)
+        self._restore_point = self._backup_expt(target)
+        self.sm.notify_listeners("active_context_changed")
+        self.sm.notify_listeners("data_imported")
+        
+        ui.notify(f"New data model version '{new_name}' prepared. Original version preserved.", type="positive")
 
     async def load_exptdata(self):
         try:
@@ -236,6 +400,12 @@ class DataImportPanel(BaseComponent):
         self.ignore_checkboxes.clear()
         self.dtype_labels.clear()
         self.dtype_dropdowns.clear()
+
+        # Update restore point if active context has changed
+        active_expt = self.sm.active_expt_data_or_none
+        if active_expt is not None:
+            if not hasattr(self, "_restore_point") or self._restore_point is None or self._restore_point.id != active_expt.id:
+                self._restore_point = self._backup_expt(active_expt)
 
         with self.expt_data_col_block:
             if not self.sm.active_expt_data.data.empty:
@@ -398,63 +568,4 @@ class DataImportPanel(BaseComponent):
             ui.notify(f"New experimental data type '{name_input.value}' added.", type="positive")
             self._load_expt_data_col_details()
 
-    def generate_data_dropdown(self, e=None):
-        """Generate the dropdown for selecting experimental data."""
 
-        self.expt_data_dropdown_button.clear()
-        if len(self.sm.expt_datas) > 0 and len(self.sm.raw_datas) > 0:
-            self.expt_data_dropdown_button.visible = True
-            with self.expt_data_dropdown_button:
-                self.expt_data_dropdown_rows = []
-                for m in self.sm.raw_datas.values():
-                    with ui.row().classes("p-5 items-center") as x:
-                        self.expt_data_dropdown_rows.append(x)
-                        with ui.item(on_click=lambda m=m: self.load_raw_data(m)):
-                            ui.item_label(m.filename)
-                        ui.icon("delete").on("click", lambda m=m: self.delete_raw_data(m)).classes(
-                            "cursor-pointer text-red-600"
-                        )
-                # ui.item("Add a new model...", on_click= self.add_new_expt_data)
-        else:
-            self.expt_data_dropdown_button.visible = False
-        active_raw = self.sm.active_raw_data_or_none
-        if active_raw is not None and hasattr(active_raw, "filename"):
-            self.expt_data_dropdown_button.bind_text_from(active_raw, "filename")
-
-    def load_raw_data(self, raw_data):
-        self.sm.active_raw_data_id = raw_data.id
-        active_expt = self.sm.active_expt_data_or_none
-        if active_expt is None or active_expt.raw_data_id != raw_data.id:
-            self.sm.active_expt_data_id = None  # reset active expt data if raw data changes
-            # activate the newest expt data that uses this raw data
-            for ed in reversed(list(self.sm.expt_datas.values())):
-                if ed.raw_data_id == raw_data.id:
-                    self.sm.active_expt_data_id = ed.id
-                    break
-
-            active_fit = self.sm.active_fit_or_none
-            if active_fit is None or active_fit.expt_data_id != self.sm.active_expt_data_id:
-                self.sm.active_fit_id = None  # reset active fit if expt data changes
-                # activate the newest fit that uses this expt data
-                for f in reversed(list(self.sm.fits.values())):
-                    if f.expt_data_id == self.sm.active_expt_data_id:
-                        self.sm.active_fit_id = f.id
-                        break
-
-        self.sm.reconcile_active_context(reason="load_raw_data_selection", emit_events=True)
-        self.sm.notify_listeners("data_imported")
-
-    def delete_raw_data(self, raw_data):
-        self.sm.delete_raw_data(raw_data)
-        # objs_to_delete = []
-        # for f in self.sm.expt_datas.values():
-        #     if f.raw_data_id == raw_data.id:
-        #         objs_to_delete.append(f)
-        #         for ff in self.sm.fits.values():
-        #             if ff.expt_data_id == f.id:
-        #                 objs_to_delete.append(ff)
-        # for obj in objs_to_delete:
-        #     self.sm.delete_object(obj)
-
-    def add_new_raw_data(self):
-        pass

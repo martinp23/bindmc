@@ -66,6 +66,11 @@ class ExptData:
             self.col_to_comp = np.array(self.col_to_comp, dtype=float)
         if not isinstance(self.integ_to_spec, np.ndarray):
             self.integ_to_spec = np.array(self.integ_to_spec, dtype=float)
+        if not isinstance(self.delta_to_spec, np.ndarray):
+            if self.delta_to_spec is not None:
+                self.delta_to_spec = np.array(self.delta_to_spec, dtype=object)
+            else:
+                self.delta_to_spec = np.array([], dtype=object)
 
         # if len(self.col_details) != len(self.data.columns):
         #     # Initialize col_details if it doesn't match the number of columns
@@ -80,6 +85,10 @@ class ExptData:
         if not isinstance(self.model_id, uuid.UUID):
             if isinstance(self.model_id, str) and self.model_id != "None":
                 self.model_id = uuid.UUID(self.model_id)
+
+        if not isinstance(self.raw_data_id, uuid.UUID):
+            if isinstance(self.raw_data_id, str) and self.raw_data_id != "None":
+                self.raw_data_id = uuid.UUID(self.raw_data_id)
 
         if isinstance(self._model, Model) and not self.model_id:
             self.model_id = self._model.id
@@ -155,6 +164,7 @@ class ExptData:
     @property
     def columns(self) -> list[str]:
         """Get the column names of the selected experimental data."""
+        self.reconcile_matrices()
         return self.selected_data.columns.tolist() if not self.selected_data.empty else []
 
     @property
@@ -330,7 +340,7 @@ class ExptData:
             # ),
             "col_to_comp": self.col_to_comp.tolist() if isinstance(self.col_to_comp, np.ndarray) else [],
             "integ_to_spec": self.integ_to_spec.tolist() if isinstance(self.integ_to_spec, np.ndarray) else [],
-            "col_details": self.col_details if isinstance(self.col_details, dict) else {},
+            "col_details": {k: dict(v) if isinstance(v, dict) else v for k, v in self.col_details.items()} if isinstance(self.col_details, dict) else {},
             "id": str(self.id) if self.id else "",
             "model_id": str(self.model_id) if hasattr(self, "model_id") else "",
             "raw_data_id": str(self.raw_data_id) if hasattr(self, "raw_data_id") else "",
@@ -339,7 +349,7 @@ class ExptData:
             # limiting_shifts as a list for JSON safety (tuple keys not JSON-serializable)
             "limiting_shifts": [asdict(v) for v in self.limiting_shifts.values()],
             "is_analytical_fast_ex": self.is_analytical_fast_ex,
-            "selected_columns": self.selected_columns,
+            "selected_columns": list(self.selected_columns),
             "dark_species": {col: list(species) for col, species in self.dark_species.items()},
         }
 
@@ -487,3 +497,76 @@ class ExptData:
                         serialized_row.append(None)
             serialized_rows.append(serialized_row)
         return serialized_rows
+
+    def reconcile_matrices(self) -> None:
+        """Align col_to_comp, integ_to_spec, and delta_to_spec with selected_columns and col_details."""
+        current_sel_cols = self.selected_columns
+        n_comp_cols = len(current_sel_cols)
+
+        # 1. col_to_comp reconciliation
+        if isinstance(self.col_to_comp, np.ndarray) and self.col_to_comp.ndim == 2:
+            if not hasattr(self, "_matrix_columns") or len(self._matrix_columns) != self.col_to_comp.shape[1]:
+                if self.col_to_comp.shape[1] == n_comp_cols:
+                    self._matrix_columns = list(current_sel_cols)
+                else:
+                    self._matrix_columns = list(current_sel_cols)[:self.col_to_comp.shape[1]]
+                    if len(self._matrix_columns) < self.col_to_comp.shape[1]:
+                        self._matrix_columns += [f"__unknown_col_{i}__" for i in range(self.col_to_comp.shape[1] - len(self._matrix_columns))]
+
+            if self._matrix_columns != current_sel_cols:
+                new_col_to_comp = np.zeros((self.col_to_comp.shape[0], len(current_sel_cols)), dtype=float)
+                for new_idx, col_name in enumerate(current_sel_cols):
+                    if col_name in self._matrix_columns:
+                        old_idx = self._matrix_columns.index(col_name)
+                        new_col_to_comp[:, new_idx] = self.col_to_comp[:, old_idx]
+                self.col_to_comp = new_col_to_comp
+                self._matrix_columns = list(current_sel_cols)
+
+        # 2. integ_to_spec reconciliation
+        if isinstance(self.integ_to_spec, np.ndarray) and self.integ_to_spec.ndim == 2 and self.integ_to_spec.size > 0:
+            if not hasattr(self, "_matrix_integ_columns") or len(self._matrix_integ_columns) != self.integ_to_spec.shape[1]:
+                if self.integ_to_spec.shape[1] == n_comp_cols:
+                    self._matrix_integ_columns = list(current_sel_cols)
+                else:
+                    self._matrix_integ_columns = list(current_sel_cols)[:self.integ_to_spec.shape[1]]
+                    if len(self._matrix_integ_columns) < self.integ_to_spec.shape[1]:
+                        self._matrix_integ_columns += [f"__unknown_col_{i}__" for i in range(self.integ_to_spec.shape[1] - len(self._matrix_integ_columns))]
+
+            if self._matrix_integ_columns != current_sel_cols:
+                new_integ_to_spec = np.zeros((self.integ_to_spec.shape[0], len(current_sel_cols)), dtype=float)
+                for new_idx, col_name in enumerate(current_sel_cols):
+                    if col_name in self._matrix_integ_columns:
+                        old_idx = self._matrix_integ_columns.index(col_name)
+                        new_integ_to_spec[:, new_idx] = self.integ_to_spec[:, old_idx]
+                self.integ_to_spec = new_integ_to_spec
+                self._matrix_integ_columns = list(current_sel_cols)
+
+        # 3. delta_to_spec reconciliation
+        current_fast_ex_cols = []
+        if self.col_details:
+            for name, col in self.col_details.items():
+                if col.get("dtype") is None:
+                    continue
+                dtype_key = str(col.get("dtype", "")).lower()
+                if col.get("depindep") == "dep" and ("delta" in dtype_key or "ppm" in dtype_key or "shift" in dtype_key):
+                    current_fast_ex_cols.append(name)
+
+        if isinstance(self.delta_to_spec, np.ndarray) and self.delta_to_spec.ndim == 2 and self.delta_to_spec.size > 0:
+            if not hasattr(self, "_matrix_fast_ex_columns") or len(self._matrix_fast_ex_columns) != self.delta_to_spec.shape[0]:
+                if self.delta_to_spec.shape[0] == len(current_fast_ex_cols):
+                    self._matrix_fast_ex_columns = list(current_fast_ex_cols)
+                else:
+                    self._matrix_fast_ex_columns = list(current_fast_ex_cols)[:self.delta_to_spec.shape[0]]
+                    if len(self._matrix_fast_ex_columns) < self.delta_to_spec.shape[0]:
+                        self._matrix_fast_ex_columns += [f"__unknown_fast_col_{i}__" for i in range(self.delta_to_spec.shape[0] - len(self._matrix_fast_ex_columns))]
+
+            if self._matrix_fast_ex_columns != current_fast_ex_cols:
+                n_species = self.delta_to_spec.shape[1]
+                new_delta_to_spec = np.empty((len(current_fast_ex_cols), n_species), dtype=object)
+                new_delta_to_spec.fill(None)
+                for new_idx, col_name in enumerate(current_fast_ex_cols):
+                    if col_name in self._matrix_fast_ex_columns:
+                        old_idx = self._matrix_fast_ex_columns.index(col_name)
+                        new_delta_to_spec[new_idx, :] = self.delta_to_spec[old_idx, :]
+                self.delta_to_spec = new_delta_to_spec
+                self._matrix_fast_ex_columns = list(current_fast_ex_cols)

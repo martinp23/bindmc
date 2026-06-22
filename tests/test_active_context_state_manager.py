@@ -274,3 +274,26 @@ def test_mcmcsim_max_retained_points_serialization():
     sm3.from_json(json.dumps(data))
     assert sm3.mcmcs[mcmc.id].max_retained_points == 1000
 
+
+def test_delete_last_expt_data_creates_empty():
+    sm = _new_state_manager()
+    model = _new_model(sm, "model-delete-last")
+    sm.active_model_id = model.id
+
+    raw, expt = _add_raw_and_expt(sm, model, "expt-only")
+    sm.active_raw_data_id = raw.id
+    sm.active_expt_data_id = expt.id
+    sm.reconcile_active_context()
+
+    assert len(sm.expt_datas) == 1
+
+    sm.delete_expt_data(expt)
+
+    # A new empty ExptData should have been created and set as active
+    assert len(sm.expt_datas) == 1
+    new_expt = list(sm.expt_datas.values())[0]
+    assert new_expt.id != expt.id
+    assert new_expt.name == "expt-only.csv"
+    assert sm.active_expt_data_id == new_expt.id
+    assert sm.active_raw_data_id == raw.id
+
