@@ -247,6 +247,10 @@ class DataModelPanel(BaseComponent):
                 self.specDeltaCards.append(card)
                 with card:
                     ui.label(f"Fast exchange shift {i + 1} ({shift})").classes("text-sm font-semibold")
+                    
+                    # Placeholder row for component total chips (renders above the input)
+                    total_chips_row = ui.row().classes("gap-1 mb-2")
+
                     with ui.row().classes("items-center"):
                         inp = ui.input().classes("flex-1").props("clearable")
                         self.specDeltaInps.append(inp)
@@ -258,6 +262,24 @@ class DataModelPanel(BaseComponent):
                                     color="teal",
                                     on_click=lambda h=text, widget=inp: self._insert_species_into_fast_inp(h, widget=widget),
                                 )
+                    
+                    # Populate the total chips row now that inp is defined
+                    with total_chips_row:
+                        if (
+                            hasattr(self.sm.active_model, "eq_mat")
+                            and isinstance(self.sm.active_model.eq_mat, np.ndarray)
+                            and self.sm.active_model.eq_mat.size > 0
+                        ):
+                            for comp_idx, comp_name in enumerate(self.sm.active_model.component_names):
+                                if comp_idx < self.sm.active_model.eq_mat.shape[0]:
+                                    vec = self.sm.active_model.eq_mat[comp_idx]
+                                    cols = [f"{s}_free" for s in self.sm.species]
+                                    expr = self.vec_to_conc_expression(vec, cols)
+                                    ui.chip(
+                                        f"all {comp_name}",
+                                        color="indigo",
+                                        on_click=lambda e, expr=expr, widget=inp: self._insert_expression_into_fast_inp(expr, widget=widget),
+                                    ).classes("text-white")
                         # placeholder checkbox to enable the input
                         en_cb = ui.checkbox("Enabled", value=True)
                         self.specDeltaCbs.append(en_cb)
@@ -630,5 +652,16 @@ class DataModelPanel(BaseComponent):
 
             idx = self.specDeltaInps.index(target_widget)
             self._handle_spec_delta_blur(idx, target_widget)
+
+    def _insert_expression_into_fast_inp(self, expr: str, widget) -> None:
+        """Insert an expression string directly into the specified fast-exchange input."""
+        val = widget.value
+        if not val:
+            widget.value = expr
+        else:
+            widget.value = val + f"+{expr}"
+
+        idx = self.specDeltaInps.index(widget)
+        self._handle_spec_delta_blur(idx, widget)
 
 
