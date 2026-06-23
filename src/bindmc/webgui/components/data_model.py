@@ -1,5 +1,4 @@
 import re
-import uuid
 
 from nicegui import ui
 from nicegui.events import ClickEventArguments
@@ -7,7 +6,7 @@ import numpy as np
 
 from .base import BaseComponent
 from .dataset_selector import DatasetSelector
-from ..classes import ChemicalShiftParam, ExptData
+from ..classes import ChemicalShiftParam
 from ..utils import _infer_simple_fast_exchange_topology
 
 # def _default_analytical_shift_species(

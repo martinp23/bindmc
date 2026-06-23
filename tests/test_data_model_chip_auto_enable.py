@@ -1,45 +1,47 @@
 from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
-import pytest
 
 from bindmc.webgui.classes import ExptData, Model, RawData, ExptDataType, Component
 from bindmc.webgui.state import StateManager
 from bindmc.webgui.components.data_model import DataModelPanel
 
-def setup_mock_ui(mock_ui_model):
+def setup_mock_ui(mock_ui_model, mock_ui_selector):
     # Mock NiceGUI UI elements to prevent startup crash
     mock_element = MagicMock()
-    mock_ui_model.column.return_value = mock_element
-    mock_ui_model.row.return_value = mock_element
-    mock_ui_model.card.return_value = mock_element
-    mock_ui_model.chip.return_value = mock_element
-    mock_ui_model.label.return_value = mock_element
-    mock_ui_model.button.return_value = mock_element
-    mock_ui_model.element.return_value = mock_element
+    for mock_ui in (mock_ui_model, mock_ui_selector):
+        mock_ui.column.return_value = mock_element
+        mock_ui.row.return_value = mock_element
+        mock_ui.card.return_value = mock_element
+        mock_ui.chip.return_value = mock_element
+        mock_ui.label.return_value = mock_element
+        mock_ui.button.return_value = mock_element
+        mock_ui.element.return_value = mock_element
+        mock_ui.dropdown_button.return_value = mock_element
 
-    def create_mock_input(*args, **kwargs):
-        inp = MagicMock()
-        inp.value = kwargs.get("value", "")
-        inp.bind_enabled_from = MagicMock()
-        inp.on = MagicMock()
-        inp.classes = MagicMock(return_value=inp)
-        inp.props = MagicMock(return_value=inp)
-        inp.on_value_change = MagicMock(return_value=inp)
-        return inp
-    mock_ui_model.input.side_effect = create_mock_input
+        def create_mock_input(*args, **kwargs):
+            inp = MagicMock()
+            inp.value = kwargs.get("value", "")
+            inp.bind_enabled_from = MagicMock()
+            inp.on = MagicMock()
+            inp.classes = MagicMock(return_value=inp)
+            inp.props = MagicMock(return_value=inp)
+            inp.on_value_change = MagicMock(return_value=inp)
+            return inp
+        mock_ui.input.side_effect = create_mock_input
 
-    def create_mock_checkbox(*args, **kwargs):
-        cb = MagicMock()
-        cb.value = kwargs.get("value", False)
-        cb.on_value_change = MagicMock()
-        return cb
-    mock_ui_model.checkbox.side_effect = create_mock_checkbox
+        def create_mock_checkbox(*args, **kwargs):
+            cb = MagicMock()
+            cb.value = kwargs.get("value", False)
+            cb.on_value_change = MagicMock()
+            return cb
+        mock_ui.checkbox.side_effect = create_mock_checkbox
 
 
+@patch("bindmc.webgui.components.dataset_selector.ui")
 @patch("bindmc.webgui.components.data_model.ui")
-def test_data_model_chip_auto_enable(mock_ui_model):
-    setup_mock_ui(mock_ui_model)
+def test_data_model_chip_auto_enable(mock_ui_model, mock_ui_selector):
+    setup_mock_ui(mock_ui_model, mock_ui_selector)
 
     # 1. Setup a StateManager and a Model
     sm = StateManager(load_prior_state=False)

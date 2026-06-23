@@ -1,10 +1,7 @@
 import gzip
-import json
 import os
 from unittest.mock import MagicMock, patch
 
-import numpy as np
-import pytest
 from lmfit import Parameter as LMFitParameter
 
 from bindmc.webgui.components.data_model import DataModelPanel

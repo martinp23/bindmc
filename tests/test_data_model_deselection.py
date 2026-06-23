@@ -4,7 +4,7 @@ import pytest
 import importlib
 from unittest.mock import MagicMock, patch
 
-from bindmc.webgui.classes import ExptData, Model, RawData, ExptDataType, Component, ChemicalShiftParam, FitResult, MCMCSim
+from bindmc.webgui.classes import ExptData, Model, RawData, ExptDataType, Component, FitResult, MCMCSim
 from bindmc.webgui.state import StateManager
 from bindmc.webgui.components.data_model import DataModelPanel
 from bindmc.webgui.components.data_import import DataImportPanel

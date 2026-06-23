@@ -1,7 +1,6 @@
 import io
 import json
 import uuid
-import re
 import zipfile
 import numpy as np
 import pandas as pd
@@ -14,7 +13,6 @@ from .graph import Graph
 from ..classes import FitResult
 from ..utils import safe_filename, _infer_simple_fast_exchange_topology, custom_download
 from functools import partial
-from typing import cast
 
 import logging
 

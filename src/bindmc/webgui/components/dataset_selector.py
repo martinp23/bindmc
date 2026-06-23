@@ -2,7 +2,7 @@ import uuid
 import re
 from nicegui import ui
 from .base import BaseComponent
-from ..classes import ExptData, RawData
+from ..classes import ExptData
 
 
 class DatasetSelector(BaseComponent):

@@ -13,7 +13,6 @@ import matplotlib
 
 matplotlib.use("module://matplotlib.backends.backend_svg")
 import sys
-import webview
 from nicegui import native, ui, app
 from bindmc.webgui.app import BindMCServer
 import logging
