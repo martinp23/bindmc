@@ -41,8 +41,6 @@ jobs:
         PYTHONPATH: "src;bindtools/src"
       run: |
         uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py `
-          --add-data "$env:SITE_PKG\arviz\static;arviz/static" `
-          --add-data "$env:SITE_PKG\arviz\data;arviz/data" `
           --add-data "$env:SITE_PKG\latex2mathml\unimathsymbols.txt;latex2mathml" `
           --add-data "src\bindmc\webgui\default_models.json;webgui" 
       
@@ -96,8 +94,6 @@ jobs:
         PYTHONPATH: "src:bindtools/src"
       run: |
         uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py \
-          --add-data "$SITE_PKG/arviz/static:arviz/static" \
-          --add-data "$SITE_PKG/arviz/data:arviz/data" \
           --add-data "$SITE_PKG/latex2mathml/unimathsymbols.txt:latex2mathml" \
           --add-data "src/bindmc/webgui/default_models.json:webgui" 
    
@@ -152,8 +148,6 @@ jobs:
         PYTHONPATH: "src:bindtools/src"
       run: |
         uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py \
-          --add-data "$SITE_PKG/arviz/static:arviz/static" \
-          --add-data "$SITE_PKG/arviz/data:arviz/data" \
           --add-data "$SITE_PKG/latex2mathml/unimathsymbols.txt:latex2mathml" \
           --add-data "src/bindmc/webgui/default_models.json:webgui" 
      
@@ -208,8 +202,6 @@ jobs:
         PYTHONPATH: "src:bindtools/src"
       run: |
         uv run nicegui-pack --onefile --name "bindmc" src/bindmc/main.py \
-          --add-data "$SITE_PKG/arviz/static:arviz/static" \
-          --add-data "$SITE_PKG/arviz/data:arviz/data" \
           --add-data "$SITE_PKG/latex2mathml/unimathsymbols.txt:latex2mathml" \
           --add-data "src/bindmc/webgui/default_models.json:webgui" 
 
