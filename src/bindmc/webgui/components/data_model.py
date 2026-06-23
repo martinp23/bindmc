@@ -231,15 +231,15 @@ class DataModelPanel(BaseComponent):
         with self.dataModel_specFastExchange_block:
             # species_list = [f'{x}_free' for x in self.sm.species]
 
-            default_shift_species = None
-            if simple_model is not None and len(simple_model[1]) > 0:
-                default_shift_species = f"{self.sm.species[simple_model[1][0]]}_free"
+            # default_shift_species = None
+            # if simple_model is not None and len(simple_model[1]) > 0:
+            #     default_shift_species = f"{self.sm.species[simple_model[1][0]]}_free"
 
-            if default_shift_species is not None:
-                ui.label(
-                    f"Analytical model detected: defaulting fast-exchange expression to [{default_shift_species}] "
-                    "for this observable. You can edit it if needed."
-                ).classes("text-xs text-gray-600")
+            # if default_shift_species is not None:
+            #     ui.label(
+            #         f"Analytical model detected: defaulting fast-exchange expression to [{default_shift_species}] "
+            #         "for this observable. You can edit it if needed."
+            #     ).classes("text-xs text-gray-600")
 
             for i, shift in enumerate(self.fast_ex_list_names):
                 # card per chemical shift column
@@ -338,8 +338,8 @@ class DataModelPanel(BaseComponent):
                             inp.value = value
                             if value == "":
                                 en_cb.value = False
-                        elif default_shift_species is not None:
-                            inp.value = f"[{default_shift_species}]"
+                        # elif default_shift_species is not None:
+                        #     inp.value = f"[{default_shift_species}]"
                             # Build corresponding ChemicalShiftParam widgets immediately.
                             self._handle_spec_delta_blur(i, inp)
 
@@ -619,6 +619,15 @@ class DataModelPanel(BaseComponent):
         if not isinstance(h, str):
             raise ValueError("Species name from chip is not a str")
         if hasattr(self, "last_focus") and self.last_focus is not None:
+            if hasattr(self, "specDeltaInps") and self.last_focus in self.specDeltaInps:
+                idx = self.specDeltaInps.index(self.last_focus)
+                self.specDeltaCbs[idx].value = True
+            elif hasattr(self, "spec_integ_inps") and self.last_focus in self.spec_integ_inps.values():
+                for spec, inp in self.spec_integ_inps.items():
+                    if inp == self.last_focus:
+                        self.spec_integ_cbs[spec].value = True
+                        break
+
             val = self.last_focus.value
             if not val:
                 self.last_focus.value = h
@@ -651,6 +660,7 @@ class DataModelPanel(BaseComponent):
                 target_widget.value = val + f"+{term}"
 
             idx = self.specDeltaInps.index(target_widget)
+            self.specDeltaCbs[idx].value = True
             self._handle_spec_delta_blur(idx, target_widget)
 
     def _insert_expression_into_fast_inp(self, expr: str, widget) -> None:
@@ -662,6 +672,7 @@ class DataModelPanel(BaseComponent):
             widget.value = val + f"+{expr}"
 
         idx = self.specDeltaInps.index(widget)
+        self.specDeltaCbs[idx].value = True
         self._handle_spec_delta_blur(idx, widget)
 
 
