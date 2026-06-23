@@ -466,7 +466,7 @@ class BayesPanel(BaseComponent):
                         if self.mcmc.thin != 1:
                             axs[d].set_xlabel(f"Steps (thinning 1-in-{self.mcmc.thin} points)")
                         else:
-                            axs[d].set_xlabel(f"Steps")
+                            axs[d].set_xlabel("Steps")
 
                 # Plot acceptance fraction
                 axs[-1].bar(range(nwalkers), acceptance_frac)

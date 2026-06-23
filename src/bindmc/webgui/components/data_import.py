@@ -90,8 +90,6 @@ class DataImportPanel(BaseComponent):
         """Return a copy of old_expt with the SAME UUID and name (a true backup)."""
         if old_expt is None:
             return None
-        import uuid
-        from dataclasses import asdict
         from ..classes import ChemicalShiftParam
         d = old_expt.to_dict()
         limiting_shifts_raw = d.pop("limiting_shifts", []) or []
