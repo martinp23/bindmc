@@ -1,1 +1,170 @@
-{ "models": [{"name": "Simple 1:1", "eq_str": "H+G=HG", "eq_mat_str": "[[1.0, 0.0, 1.0]\n [0.0, 1.0, 1.0]]", "eq_mat": [[1.0, 0.0, 1.0], [0.0, 1.0, 1.0]], "nComp": 2, "nStep": 20, "components": [{"name": "H", "start_conc": 0, "end_conc": 0, "constant": false, "_start_units": "mM", "_end_units": "mM", "spacing": "lin"}, {"name": "G", "start_conc": 0, "end_conc": 0, "constant": false, "_start_units": "mM", "_end_units": "mM", "spacing": "lin"}], "binding_constants": [{"species": "H", "logK": 0, "vary": false, "isComp": true, "min": null, "max": null}, {"species": "G", "logK": 0, "vary": false, "isComp": true, "min": null, "max": null}, {"species": "HG", "logK": 4.0, "vary": true, "isComp": false, "min": null, "max": null}], "results": [], "species": ["H", "G", "HG"], "component_names": ["H", "G"], "component_concs": {}, "id": "d830f1fb-63f6-4f6d-a4b1-a1fbcbea7d8d"}, {"name": "Simple 1:2", "eq_str": "H+G=HG\nH+2G=HG2", "eq_mat_str": "[[1.0, 0.0, 1.0, 1.0]\n [0.0, 1.0, 1.0, 2.0]]", "eq_mat": [[1.0, 0.0, 1.0, 1.0], [0.0, 1.0, 1.0, 2.0]], "nComp": 2, "nStep": 20, "components": [{"name": "H", "start_conc": 0, "end_conc": 0, "constant": false, "_start_units": "mM", "_end_units": "mM", "spacing": "lin"}, {"name": "G", "start_conc": 0, "end_conc": 0, "constant": false, "_start_units": "mM", "_end_units": "mM", "spacing": "lin"}], "binding_constants": [{"species": "H", "logK": 0, "vary": false, "isComp": true, "min": null, "max": null}, {"species": "G", "logK": 0, "vary": false, "isComp": true, "min": null, "max": null}, {"species": "HG", "logK": 4.0, "vary": true, "isComp": false, "min": null, "max": null}, {"species": "HG2", "logK": 8.5, "vary": true, "isComp": false, "min": null, "max": null}], "results": [], "species": ["H", "G", "HG", "HG2"], "component_names": ["H", "G"], "component_concs": {}, "id": "7b53994c-a9d0-4b39-9461-c5443d9d9e13"}], "active_model_id": "d830f1fb-63f6-4f6d-a4b1-a1fbcbea7d8d" }
+{
+    "models": [
+        {
+            "name": "Simple 1:1",
+            "eq_str": "H+G=HG",
+            "eq_mat_str": "[[1.0, 0.0, 1.0]\n [0.0, 1.0, 1.0]]",
+            "eq_mat": [
+                [
+                    1.0,
+                    0.0,
+                    1.0
+                ],
+                [
+                    0.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "nComp": 2,
+            "nStep": 20,
+            "components": [
+                {
+                    "name": "H",
+                    "start_conc": 0,
+                    "end_conc": 0,
+                    "constant": false,
+                    "_start_units": "mM",
+                    "_end_units": "mM",
+                    "spacing": "lin"
+                },
+                {
+                    "name": "G",
+                    "start_conc": 0,
+                    "end_conc": 0,
+                    "constant": false,
+                    "_start_units": "mM",
+                    "_end_units": "mM",
+                    "spacing": "lin"
+                }
+            ],
+            "binding_constants": [
+                {
+                    "species": "H",
+                    "logK": 0,
+                    "vary": false,
+                    "isComp": true,
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "species": "G",
+                    "logK": 0,
+                    "vary": false,
+                    "isComp": true,
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "species": "HG",
+                    "logK": 4.0,
+                    "vary": true,
+                    "isComp": false,
+                    "min": 2,
+                    "max": 6
+                }
+            ],
+            "results": [],
+            "species": [
+                "H",
+                "G",
+                "HG"
+            ],
+            "component_names": [
+                "H",
+                "G"
+            ],
+            "component_concs": {},
+            "id": "d830f1fb-63f6-4f6d-a4b1-a1fbcbea7d8d"
+        },
+        {
+            "name": "Simple 1:2",
+            "eq_str": "H+G=HG\nH+2G=HG2",
+            "eq_mat_str": "[[1.0, 0.0, 1.0, 1.0]\n [0.0, 1.0, 1.0, 2.0]]",
+            "eq_mat": [
+                [
+                    1.0,
+                    0.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    0.0,
+                    1.0,
+                    1.0,
+                    2.0
+                ]
+            ],
+            "nComp": 2,
+            "nStep": 20,
+            "components": [
+                {
+                    "name": "H",
+                    "start_conc": 0,
+                    "end_conc": 0,
+                    "constant": false,
+                    "_start_units": "mM",
+                    "_end_units": "mM",
+                    "spacing": "lin"
+                },
+                {
+                    "name": "G",
+                    "start_conc": 0,
+                    "end_conc": 0,
+                    "constant": false,
+                    "_start_units": "mM",
+                    "_end_units": "mM",
+                    "spacing": "lin"
+                }
+            ],
+            "binding_constants": [
+                {
+                    "species": "H",
+                    "logK": 0,
+                    "vary": false,
+                    "isComp": true,
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "species": "G",
+                    "logK": 0,
+                    "vary": false,
+                    "isComp": true,
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "species": "HG",
+                    "logK": 4.0,
+                    "vary": true,
+                    "isComp": false,
+                    "min": 2,
+                    "max": 6
+                },
+                {
+                    "species": "HG2",
+                    "logK": 8.5,
+                    "vary": true,
+                    "isComp": false,
+                    "min": 4,
+                    "max": 10
+                }
+            ],
+            "results": [],
+            "species": [
+                "H",
+                "G",
+                "HG",
+                "HG2"
+            ],
+            "component_names": [
+                "H",
+                "G"
+            ],
+            "component_concs": {},
+            "id": "7b53994c-a9d0-4b39-9461-c5443d9d9e13"
+        }
+    ],
+    "active_model_id": "d830f1fb-63f6-4f6d-a4b1-a1fbcbea7d8d"
+}
