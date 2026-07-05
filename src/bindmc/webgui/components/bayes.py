@@ -308,7 +308,7 @@ class BayesPanel(BaseComponent):
                 it_s = _TRIAL_STEPS / trial_elapsed
                 full_seconds = nsteps_target * trial_elapsed / _TRIAL_STEPS
                 full_time_str = _format_duration(full_seconds)
-                logger.info("Trial run finished; took {trial_elapsed:.1f} s ({it_s:.2f} it/s).")
+                logger.info(f"Trial run finished; took {trial_elapsed:.1f} s ({it_s:.2f} it/s).")
                 with ui.dialog() as timing_dialog, ui.card().classes("w-[min(560px,92vw)]"):
                     ui.label("Runtime estimate").classes("text-lg font-bold")
                     ui.label(f"{_TRIAL_STEPS:,} steps took {trial_elapsed:.1f} s ({it_s:.2f} it/s).").classes(
