@@ -2,6 +2,7 @@ from nicegui.testing import User
 import sys
 import subprocess
 import time
+import asyncio
 
 pytest_plugins = ["nicegui.testing.user_plugin"]
 
@@ -81,5 +82,79 @@ def test_module_execution_startup() -> None:
         f"Stdout:\n{full_stdout}\n"
         f"Stderr:\n{full_stderr}"
     )
+
+
+async def test_version_check_warning_new_version_available(user: User, monkeypatch) -> None:
+    # 1. Mock PyPI returning a newer version than current version
+    import urllib.request
+    from io import BytesIO
+    from unittest.mock import MagicMock
+
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'{"info": {"version": "99.9.9"}}'
+    mock_response.__enter__.return_value = mock_response
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *args, **kwargs: mock_response)
+
+    # 2. Mock current version to be a fixed low version
+    import importlib.metadata
+    from importlib.metadata import PackageNotFoundError
+
+    def mock_version(package_name):
+        if package_name == "bindmc":
+            return "0.1.0"
+        raise PackageNotFoundError
+
+    monkeypatch.setattr(importlib.metadata, "version", mock_version)
+
+    # 3. Load the index page and verify warning is visible
+    await user.open("/")
+    await user.should_see("A new version of BindMC is available!")
+    await user.should_see("For more details, see the BindMC website")
+
+    # 4. Dismiss warning and verify it disappears
+    user.find("Dismiss").click()
+    # Give a tiny sleep for UI update if needed, though user.find is reactive
+    await asyncio.sleep(0.1)
+    try:
+        user.find("A new version of BindMC is available!")
+        assert False, "Alert should have been dismissed and not found on the page."
+    except AssertionError:
+        pass
+
+
+async def test_version_check_warning_no_new_version(user: User, monkeypatch) -> None:
+    # 1. Mock PyPI returning the same version
+    import urllib.request
+    from io import BytesIO
+    from unittest.mock import MagicMock
+
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'{"info": {"version": "0.1.0"}}'
+    mock_response.__enter__.return_value = mock_response
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *args, **kwargs: mock_response)
+
+    # 2. Mock current version to be the same version
+    import importlib.metadata
+    from importlib.metadata import PackageNotFoundError
+
+    def mock_version(package_name):
+        if package_name == "bindmc":
+            return "0.1.0"
+        raise PackageNotFoundError
+
+    monkeypatch.setattr(importlib.metadata, "version", mock_version)
+
+    # 3. Load the index page and verify no warning is visible
+    await user.open("/")
+    await user.should_see("BindMC")
+    try:
+        user.find("A new version of BindMC is available!")
+        assert False, "Alert should not have been displayed."
+    except AssertionError:
+        pass
+
+
 
 
