@@ -186,6 +186,18 @@ jobs:
         version: "latest"
         enable-cache: true
 
+    - name: Install LLVM for llvmlite
+      shell: bash
+      run: |
+        brew install llvm@22
+        LLVM_PREFIX=$(brew --prefix llvm@22)
+        {
+          echo "LLVM_CONFIG=$LLVM_PREFIX/bin/llvm-config"
+          echo "LLVM_DIR=$LLVM_PREFIX/lib/cmake/llvm"
+          echo "CMAKE_PREFIX_PATH=$LLVM_PREFIX"
+          echo "PATH=$LLVM_PREFIX/bin:$PATH"
+        } >> $GITHUB_ENV
+
     - name: Install dependencies
       run: |
         uv sync --dev
