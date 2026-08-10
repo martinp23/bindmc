@@ -2,7 +2,7 @@
 
 `bindmc` supports two modes for calculating equilibrium species concentrations:
 1. **Numerical Speciation Solver**: Arbitrary stoichiometries using Newton–Raphson iteration.
-2. **Analytical Fast Exchange Solvers**: Exact closed-form algebraic solutions for common topologies ($1:1$, $1:2$, $2:1$).
+2. **Analytical Fast Exchange Solvers**: Exact closed-form algebraic solutions for common single host-guest topologies ($1:1$, $1:2$, $2:1$).
 
 ---
 
@@ -33,11 +33,26 @@ H + 2G <=> HG2
 
 `bindmc` automatically parses the equations, identifies free components (`H`, `G`) and complexes (`HG`, `HG2`), and constructs the stoichiometry matrix ($E_{\text{mat}}$).
 
+<!-- 
+### Multi-State & Competition Equilibria (Indicator Displacement / Displacement Assays)
+
+Competitive equilibria involving multiple hosts, guests, or metals (e.g., indicator displacement assays):
+
+```text
+H + I <=> HI
+H + G <=> HG
+```
+
+*Note: Automated test cases for competitive equilibria are currently under development in the test suite.*
+-->
+
 ---
 
-## 2. Analytical Solvers
+## 2. Analytical Fast-Exchange Solvers
 
-For fast-exchange titrations with standard binding topologies, analytical solutions avoid iterative root-finding overhead:
+For fast-exchange titrations with standard binding topologies ($1:1$, $1:2$, $2:1$ host-guest systems), analytical solvers avoid iterative root-finding overhead.
+
+`bindmc` automatically inspects the stoichiometry matrix ($E_{\text{mat}}$) to detect whether a model matches a simple analytical topology. If it does, `calc_analytical_speciation` calculates exact species concentrations in a single vectorized numpy operation.
 
 ### 1:1 Fast Exchange Model
 Equilibrium reaction: $\text{H} + \text{G} \rightleftharpoons \text{HG}$ with binding constant $K_{11}$.
@@ -51,4 +66,4 @@ Observed chemical shift:
 $$\delta_{\text{obs}} = \delta_{\text{H}} + (\delta_{\text{HG}} - \delta_{\text{H}}) \frac{[\text{HG}]}{[\text{H}]_{\text{tot}}}$$
 
 ### 1:2 and 2:1 Fast Exchange Models
-Closed-form analytical equations are also provided for $1:2$ ($\text{H} + 2\text{G} \rightleftharpoons \text{HG}_2$) and $2:1$ ($2\text{H} + \text{G} \rightleftharpoons \text{H}_2\text{G}$) equilibria.
+Closed-form analytical equations solve cubic polynomials directly via vectorized trigonometric methods (`_solve_cubic_vectorized`).

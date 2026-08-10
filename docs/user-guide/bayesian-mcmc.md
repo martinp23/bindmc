@@ -1,44 +1,74 @@
 # Bayesian MCMC Sampling
 
-The **Bayes / MCMC** tab performs Markov Chain Monte Carlo sampling using `emcee` to sample the full posterior probability distribution of model parameters, quantifying uncertainties and parameter correlations.
+The **Bayes / MCMC** tab performs Markov Chain Monte Carlo sampling using `emcee` to sample the posterior probability distribution of model parameters, quantifying uncertainties and parameter correlations.
 
 ---
 
-## 1. Prior Probability Distributions
+## 1. Prior Distributions & Parameter Bounds
 
-Bayes' theorem relates the posterior probability $P(\theta \mid D)$ of parameters $\theta$ given data $D$:
+In `bindmc`, parameters are assigned **Uniform priors** bounded by lower and upper limits $[a, b]$:
 
-$$P(\theta \mid D) \propto P(D \mid \theta) \cdot P(\theta)$$
+$$P(\theta) = \begin{cases} \frac{1}{b - a} & \text{if } a \le \theta \le b \\ 0 & \text{otherwise} \end{cases}$$
 
-In `bindmc`, you can assign independent prior distributions $P(\theta)$ to each parameter:
-
-- **Uniform Prior**: Equal probability over specified $[a, b]$ bounds.
-- **Gaussian (Normal) Prior**: Centered around mean $\mu$ with standard deviation $\sigma$.
-- **Log-Normal Prior**: Useful for strictly positive physical quantities.
+Parameter bounds (e.g., restricting $\log_{10} K \in [0, 14]$ or limiting chemical shifts $\delta$) prevent non-physical regions of parameter space during sampling.
 
 ---
 
-## 2. MCMC Configuration
+## 2. Heterogeneous Experimental Weighting (`lnsigma`)
+
+When combining multiple data types or techniques (e.g. NMR chemical shifts in ppm vs. UV-Vis absorbance in AU vs. NMR peak integrations), measurement uncertainties and units differ significantly.
+
+`bindmc` automatically creates and samples independent log-variance hyperparameters ($\ln \sigma$) for each experimental technique:
+- `lnsigmadeltaH` (NMR $^1\text{H}$ shifts)
+- `lnsigmadeltaF` (NMR $^{19}\text{F}$ shifts)
+- `lnsigmaUVvis` (UV-Vis absorbance)
+- `lnsigmaFluorescence` (Fluorescence intensity)
+- `lnsigmaNMRInteg` (NMR peak integrations)
+
+This ensures that heterogeneous datasets are appropriately weighted according to their individual noise characteristics without manual scaling.
+
+---
+
+## 3. Convergence Diagnostics ($\tau$)
 
 - **Walkers**: Number of MCMC ensemble walkers (typically $32$ to $64$).
-- **Steps**: Number of iterations per walker (e.g. $1000$ to $5000$).
-- **Burn-in**: Number of initial steps to discard before sample collection (e.g. $200$ steps).
+- **Integrated Autocorrelation Time ($\tau$)**: `bindmc` estimates the integrated autocorrelation time $\tau$ for each parameter chain. As a rule of thumb, sampling should run for at least $50 \times \tau$ steps to guarantee independent samples and converged chains.
+- **Trace Plots**: Inspect parameter values vs. step index across all walkers. Converged chains resemble stable, stationary "hairy caterpillars" without long-term drift.
 
 ---
 
-## 3. Results & Plots
+## 4. Exporting Notebooks & External Analysis
 
-### Trace Plot
-Plots parameter values vs. step index for each walker.
-- **Convergence Check**: Chains should resemble "hairy caterpillars" randomly oscillating around stable values without drift.
+### Option A: Jupyter Notebook Export (Recommended)
+Click **Export Notebook** in the top navigation header to download an executable `.ipynb` notebook alongside your `.h5` MCMC session. The exported notebook includes complete, pre-configured template plotting code using `arviz`, `corner`, and `matplotlib`.
 
-### Corner Plot
-Generates a 2D corner plot using `corner.py` and `arviz`:
-- **1D Histograms**: Diagonal panels show 1D marginal posterior probability density functions with median and $16^{\text{th}}/84^{\text{th}}$ percentile confidence intervals.
-- **2D Contour Plots**: Off-diagonal panels reveal non-linear correlations and covariance between binding constants and chemical shift parameters.
+### Option B: Custom Python Analysis Script
+You can also inspect raw MCMC chains directly from exported `.h5` files in Python:
 
----
+```python
+import h5py
+import numpy as np
+import corner
+import matplotlib.pyplot as plt
 
-## 4. Saving Sessions
+# 1. Open exported HDF5 session file
+with h5py.File("mcmc_session.h5", "r") as f:
+    chain = f["mcmc/chain"][:]        # Shape: (steps, walkers, n_params)
+    log_prob = f["mcmc/log_prob"][:]  # Log posterior probabilities
+    labels = [s.decode() if isinstance(s, bytes) else str(s) for s in f["mcmc"].attrs["labels"]]
 
-MCMC sampling states and full chain arrays can be exported to binary **HDF5 (`.h5`)** files for long-term archiving or downstream analysis with ArviZ.
+# 2. Discard burn-in (e.g., first 200 steps) and flatten chains
+burn_in = 200
+flat_chain = chain[burn_in:].reshape(-1, chain.shape[-1])
+
+# 3. Generate publication-ready Corner plot
+fig = corner.corner(
+    flat_chain,
+    labels=labels,
+    show_titles=True,
+    quantiles=[0.16, 0.50, 0.84],
+    title_fmt=".2f"
+)
+plt.savefig("mcmc_corner_plot.png", dpi=300, bbox_inches="tight")
+plt.show()
+```
