@@ -40,15 +40,14 @@ def get_components_from_species(species_name: str, coefficient=1) -> list:
     return components
 
 
-def parse_species_term(term):
-    """
-    Parse a term like '2A' or 'AB2' to extract coefficient and species name.
+def parse_species_term(term: str) -> tuple[int, str]:
+    """Parse a term like '2A' or 'AB2' to extract coefficient and species name.
 
     Args:
         term (str): The term to parse, e.g. '2A', 'AB2'.
 
     Returns:
-        tuple: A tuple containing the coefficient (int) and species name (str).
+        tuple[int, str]: A tuple containing the coefficient (int) and species name (str).
 
     Raises:
         ValueError: If the term is not in the expected format.

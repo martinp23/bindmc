@@ -1,3 +1,9 @@
+"""Central state management and event pub/sub bus for bindmc web application.
+
+Maintains in-memory domain objects (Models, Fits, Experimental Data, Simulations, MCMC runs),
+handles browser storage persistence, and dispatches UI update notifications across components.
+"""
+
 import gzip
 import io
 import json
@@ -35,6 +41,15 @@ logger = logging.getLogger(__name__)
 
 
 class StateManager:
+    """Central source of truth for application state and UI event dispatcher.
+
+    Attributes:
+        models: Dictionary of loaded Model instances keyed by UUID.
+        fits: Dictionary of FitResult instances keyed by UUID.
+        expt_datas: Dictionary of ExptData instances keyed by UUID.
+        simulations: Dictionary of Simulation instances keyed by UUID.
+        mcmcs: Dictionary of MCMCSim instances keyed by UUID.
+    """
     def __init__(self, load_prior_state: bool = True):
         self.models: dict[uuid.UUID, Model] = {}  # make these uuid-keyed dicts?
         self.fits: dict[uuid.UUID, FitResult] = {}

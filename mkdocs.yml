@@ -1,0 +1,80 @@
+site_name: bindmc
+site_description: Scientific binding constant calculation and simulation tool with NiceGUI interface and Python core
+site_author: Martin Peeks
+repo_url: https://github.com/martinp23/bindmc
+repo_name: martinp23/bindmc
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src, bindtools/src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation & Quickstart: getting-started/index.md
+  - User Guide:
+      - Overview & Navigation: user-guide/overview.md
+      - Data Import & Schemas: user-guide/data-import.md
+      - Binding Models & Solvers: user-guide/binding-models.md
+      - Non-Linear Fitting: user-guide/fitting.md
+      - Bayesian MCMC Sampling: user-guide/bayesian-mcmc.md
+      - Notebook Export & Reproducibility: user-guide/notebook-export.md
+      - Example Datasets: user-guide/examples.md
+  - API Reference:
+      - bindtools Core API: api-reference/bindtools.md
+      - Web GUI Dataclasses: api-reference/webgui-classes.md
+      - State Management: api-reference/webgui-state.md
+      - Exporters & Helpers: api-reference/webgui-helpers.md
+  - Developer Guide:
+      - Architecture Overview: developer-guide/architecture.md
+      - Testing Guide: developer-guide/testing.md
+      - Release & Deployment: developer-guide/releasing.md
