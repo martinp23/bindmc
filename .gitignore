@@ -9,3 +9,7 @@ build-venv/*
 dist/*
 build/*
 .micromamba/*
+
+# MkDocs documentation build output
+/site/
+.cache/
