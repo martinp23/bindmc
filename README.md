@@ -17,7 +17,7 @@ Make sure you have [installed uv](https://docs.astral.sh/uv/getting-started/inst
 
 In an empty directory:
 ```bash
-uv init --python 3.12
+uv init --python 3.14
 uv add bindmc
 ```
 
