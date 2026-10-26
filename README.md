@@ -11,26 +11,51 @@
 ### Pre-built Binary
 Download the latest executable for your platform from the [Releases](https://github.com/martinp23/bindmc/releases) page.
 
+### uv
+
+Make sure you have [installed uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+In an empty directory:
+```bash
+uv init --python 3.12
+uv add bindmc
+```
+
 ### Pip
 ```bash
 pip install bindmc
 ```
+
+
 
 ## Upgrades
 
 ### Pre-built Binary
 Re-download from the link above. 
 
+### uv
+```bash
+uv add --upgrade bindmc
+```
+
 ### Pip
 ```bash
 pip install --upgrade bindmc
 ```
 
+
+
 ## Usage
 
 If using the pre-built binary, run the downloaded executable.
 
-If installed via pip, run:
+### uv
+```bash
+uv run python -m bindmc
+```
+
+### Pip
 ```bash
 python -m bindmc
 ```
+
